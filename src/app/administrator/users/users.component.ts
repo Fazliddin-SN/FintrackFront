@@ -52,47 +52,16 @@ export class UsersComponent implements OnInit {
     }>({
       title: "Yangi foydalanuvchi qo'shish!",
       html: `
-      <input id="swal-username" class="swal2-input" placeholder="Username">
-
-      <div style="position: relative; width: 100%; margin-top: .5em">
-        <input
-          id="swal-password"
-          type="password"
-          class="swal2-input"
-          placeholder="Password"
-          style="padding-right: 2.5em"
-        >
-        <i
-          id="swal-toggle-password"
-          class="material-icons"
-          style="
-            position: absolute;
-            top: 50%;
-            right: 0.75em;
-            transform: translateY(-50%);
-            cursor: pointer;
-          "
-        >visibility</i>
-      </div>
-
-      <select id="swal-role" class="swal2-select" style="margin-top: 0.5em ; border-radius: 4px;">
-        <option value="" disabled selected>Roli tanlang</option>
+      <div class="form-group">
+      <input id="username" type="text" class="form-control m-2" placeholder="Username..." />
+      <input id="password" type="password" class="form-control m-2" placeholder="Password..." />
+      <select id="staffId" class="form-control m-2" >
+        <option value="" disabled selected>Xodimlardan birini tanlang</option>
         ${optionsHtml}
-      </select>
+        </select>
+      </div>
     `,
-      didOpen: () => {
-        const pwField =
-          Swal.getPopup().querySelector<HTMLInputElement>("#swal-password")!;
-        const toggle = Swal.getPopup().querySelector<HTMLElement>(
-          `#swal-toggle-password`
-        );
 
-        toggle.addEventListener("click", () => {
-          const isHidden = pwField.type === "password";
-          pwField.type = isHidden ? "text" : "password";
-          toggle.textContent = isHidden ? "visibility_off" : "visibility";
-        });
-      },
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Saqlash",
@@ -106,15 +75,15 @@ export class UsersComponent implements OnInit {
 
       preConfirm: () => {
         const username = (
-          document.getElementById("swal-username") as HTMLInputElement
+          document.getElementById("username") as HTMLInputElement
         ).value.trim();
 
         const password = (
-          document.getElementById("swal-password") as HTMLInputElement
+          document.getElementById("password") as HTMLInputElement
         ).value.trim();
 
         const roleId = (
-          document.getElementById("swal-role") as HTMLInputElement
+          document.getElementById("staffId") as HTMLInputElement
         ).value.trim();
 
         if (!username || !password || !roleId) {
@@ -157,104 +126,89 @@ export class UsersComponent implements OnInit {
       )
       .join("");
 
-    Swal.fire<{
-      username: string;
-      password: string;
-      roleId: string;
-    }>({
-      title: "Yangi foydalanuvchi qo'shish!",
+    const result = await Swal.fire({
+      title: "Foydalanuvchi malumotlarini tahrirlash!!",
       html: `
-      <input id="swal-username" value="${user.username}" class="swal2-input" placeholder="Username">
+        <div class="form-group">
+        <div style="display: flex; align-items: center" class="m-2">
+          <label for="input-card" style="width: 180px">Kartadan</label>
+          <input
+            id="username"
+            type="text"
+            value="${user.username}"
+            class="form-control"
+            placeholder="Username..."
+          />
+        </div>
 
-      <div style="position: relative; width: 100%; margin-top: .5em">
-        <input
-          id="swal-password"
-          type="password"
-          class="swal2-input"
-          placeholder="Password"
-          style="padding-right: 2.5em"
-        >
-        <i
-          id="swal-toggle-password"
-          class="material-icons"
-          style="
-            position: absolute;
-            top: 50%;
-            right: 0.75em;
-            transform: translateY(-50%);
-            cursor: pointer;
-          "
-        >visibility</i>
+        <div style="display: flex; align-items: center" class="m-2">
+          <label for="input-card" style="width: 180px">Kartadan</label>
+          <input
+            id="password"
+            type="password"
+            class="form-control"
+            placeholder="Password..."
+          />
+        </div>
+
+        <div style="display: flex; align-items: center" class="m-3">
+          <label for="role_id" style="width: 180px">Xodim Rolini tanlang</label>
+          <select id="role_id" class="form-control">
+            <option value="" disabled selected>Xodim Roli</option>
+            ${optionsHtml}
+          </select>
+        </div>
       </div>
-
-      <select id="swal-role" class="swal2-select" style="margin-top: 0.5em ; border-radius: 4px;">
-        <option value="" disabled selected>Roli tanlang</option>
-        ${optionsHtml}
-      </select>
     `,
-      didOpen: () => {
-        const pwField =
-          Swal.getPopup().querySelector<HTMLInputElement>("#swal-password")!;
-        const toggle = Swal.getPopup().querySelector<HTMLElement>(
-          `#swal-toggle-password`
-        );
-
-        toggle.addEventListener("click", () => {
-          const isHidden = pwField.type === "password";
-          pwField.type = isHidden ? "text" : "password";
-          toggle.textContent = isHidden ? "visibility_off" : "visibility";
-        });
-      },
-      focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Saqlash",
       cancelButtonText: "Bekor Qilish",
-
       customClass: {
         confirmButton: "btn btn-success",
-        cancelButton: "btn btn-info",
+        cancelButton: "btn btn-danger",
       },
       buttonsStyling: false,
 
       preConfirm: () => {
-        const username = (
-          document.getElementById("swal-username") as HTMLInputElement
-        ).value.trim();
+        let username = $("#username").val();
+        let password = $("#password").val();
+        let role_id = Number($("#role_id").val());
 
-        const password = (
-          document.getElementById("swal-password") as HTMLInputElement
-        ).value.trim();
-
-        const roleId = (
-          document.getElementById("swal-role") as HTMLInputElement
-        ).value.trim();
-
-        if (!username || !password || !roleId) {
-          Swal.showValidationMessage(
-            "Iltimos, username, password va ro‘lni tanlang"
-          );
-          return;
-        } // Directly start your HTTP call—no Swal.showLoading()
-        this.authService
-          .updateUser(user.id, username, password, +roleId)
-          .subscribe({
-            next: (res) => {
-              // console.log("res ", res);
-              // Show the success toast
-              Swal.fire(
-                "Muvaffaqiyat!",
-                "Foydalanuvchi malumotlari tahrirlandi." + res,
-                "success"
-              );
-              this.loadUsers();
-            },
-            error: (err) => {
-              Swal.fire("Xatolik", err.error?.error || err.message, "error");
-            },
-          });
-        return { username, password, roleId };
+        return {
+          username,
+          password,
+          role_id,
+        };
       },
     });
+    if (result.isConfirmed && result.value) {
+      // console.log("result value ", result.value);
+      if (
+        !result.value.password ||
+        !result.value.role_id ||
+        !result.value.username
+      ) {
+        Swal.fire(
+          "Xatolik",
+          "Role tanlanishi va username va password kiritilishi kerak!",
+          "error"
+        );
+        return;
+      }
+      this.authService.updateUser(user.id, result.value).subscribe({
+        next: (res) => {
+          Swal.fire(
+            "Muvaffaqiyat!",
+            "Foydalanuvchi malumotlari tahrirlandi!.",
+            "success"
+          );
+          this.loadUsers();
+        },
+        error: (err) => {
+          Swal.fire("Xatolik", err.error?.error || err.message, "error");
+        },
+      });
+    }
   }
 
   // DELETE USER

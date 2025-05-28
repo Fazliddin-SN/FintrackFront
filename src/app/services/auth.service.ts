@@ -49,15 +49,10 @@ export class AuthService {
   }
 
   // update user data
-  updateUser(
-    userId: string,
-    username: string,
-    password: string,
-    role_id: number
-  ): Observable<any> {
+  updateUser(userId: string, body: any): Observable<any> {
     return this.http.put(
       `${this.basUrl}/auth/users/${userId}`,
-      { username, password, role_id },
+      { ...body },
       { headers: this.headers }
     );
   }
