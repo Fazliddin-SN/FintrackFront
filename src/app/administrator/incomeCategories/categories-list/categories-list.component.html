@@ -1,0 +1,78 @@
+<div class="main-content">
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-lg-6 col-md-12">
+        <div class="card">
+          <div class="card-header card-header-text card-header-warning">
+            <div class="card-text">
+              <h4 class="card-title">Kirim Kategoriyalari</h4>
+              <p class="card-category">
+                Bu yerda Kirim kategoriyalari saqlanadi!
+              </p>
+            </div>
+            <button
+              (click)="addIncome()"
+              class="card-text mat-button card-header-success"
+            >
+              <h4 style="font-weight: bold" class="card-title">
+                Kategoriya Qo'shish +
+              </h4>
+            </button>
+          </div>
+
+          <div class="card-body table-responsive">
+            <table class="table table-hover">
+              <thead class="text-warning">
+                <tr>
+                  <th>No</th>
+                  <th class="text-center">Kategority Nomi</th>
+
+                  <th class="text-center">Amallar</th>
+
+                  <!--  <th class="text-center">{{ dataTable.headerRow[5] }}</th>
+                                      <th class="text-center">{{ dataTable.headerRow[6] }}</th> -->
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let row of incomeCats; let i = index"
+                  class="text-center"
+                  style="padding: 1px 2px"
+                >
+                  <td>{{ i + 1 }}</td>
+                  <td style="font-weight: bold">{{ row.name }}</td>
+
+                  <!--  <td>...</td> -->
+                  <td>
+                    <button
+                      mat-raised-button
+                      type="button"
+                      class="btn btn-link btn-danger btn-just-icon visibility"
+                      (click)="updateCat(row.id, row.name)"
+                    >
+                      <i class="material-icons">edit</i>
+                    </button>
+                    <button
+                      mat-raised-button
+                      class="btn btn-link btn-danger btn-just-icon visibility"
+                      (click)="deleteInCat(row.id, row.name)"
+                    >
+                      <i class="material-icons">delete</i>
+                    </button>
+                    <!-- <button mat-raised-button class="btn btn-link btn-info btn-just-icon visibility" ><i class="material-icons" (click)="changePassword(row.id)">password</i></button>
+                                  <a href="javascript:void(0" class="btn btn-link btn-primary btn-just-icon edit"><i (click)="editClient(row.id,row.username,row.first_name,row.last_name)" class="material-icons">edit</i></a>  -->
+                    <!-- <a href="javascript:void(0s" class="btn btn-link btn-success btn-just-icon "><i (click)="receiveParcel(row.trackingNumber)"  class="material-icons">done_outline</i></a>
+                                -->
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="color: red" *ngIf="errorMessage">
+              Xatolik: {{ errorMessage }}
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

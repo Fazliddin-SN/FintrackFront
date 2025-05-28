@@ -1,0 +1,50 @@
+.password {
+  margin-top: 15px;
+  margin-left: 55px;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+}
+
+.input-group input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #e91e63;
+}
+
+.input-group span {
+  font-size: 14px;
+  color: #555;
+  user-select: none;
+}
+
+/* Ensure the input-group is aligned vertically */
+.input-group {
+  position: relative;
+  align-items: center;
+}
+
+/* Style your toggle icon inside the input group */
+.toggle-password-icon {
+  position: absolute;
+  right: 1rem;
+  top: 70%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  user-select: none;
+  font-size: 1.25rem;
+  color: rgba(0, 0, 0, 0.5);
+  transition: color 0.2s ease, transform 0.2s ease;
+  z-index: 2;
+}
+
+/* Hover/focus feedback */
+.toggle-password-icon:hover,
+.toggle-password-icon:focus {
+  color: rgba(0, 0, 0, 0.8);
+  transform: translateY(-50%) scale(1.1);
+}
