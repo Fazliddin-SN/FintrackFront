@@ -65,6 +65,18 @@ export const ownerROUTES: RouteInfo[] = [
     type: "link",
     icontype: "paid",
   },
+  {
+    path: "/tables",
+    title: "Tables",
+    type: "sub",
+    icontype: "grid_on",
+    collapse: "tables",
+    children: [
+      { path: "regular", title: "Regular Tables", ab: "RT" },
+      { path: "extended", title: "Extended Tables", ab: "ET" },
+      { path: "datatables.net", title: "Datatables.net", ab: "DT" },
+    ],
+  },
 ];
 // MANAGER ROUTES
 export const managerROUTES: RouteInfo[] = [
@@ -250,6 +262,7 @@ export class SidebarComponent implements OnInit {
   public authService = inject(AuthService);
   ps: any;
   roleId: string;
+  username: string;
   isMobileMenu() {
     if ($(window).width() > 991) {
       return false;
@@ -259,7 +272,7 @@ export class SidebarComponent implements OnInit {
 
   ngOnInit() {
     this.roleId = localStorage.getItem("roleId");
-
+    this.username = localStorage.getItem("username");
     if (this.roleId === "1") {
       this.menuItems = ownerROUTES.filter((menuItem) => menuItem);
     } else if (this.roleId === "2") {
