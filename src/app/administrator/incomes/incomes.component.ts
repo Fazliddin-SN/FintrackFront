@@ -4,6 +4,7 @@ import { IncomesService } from "src/app/services/incomes.service";
 import Swal from "sweetalert2";
 import * as $ from "jquery";
 import { DatePipe } from "@angular/common";
+import { Sort } from "@angular/material/sort";
 
 declare interface TableData {
   headerRow: string[];
@@ -32,6 +33,7 @@ export class IncomesComponent implements OnInit {
   mypages = [];
   isPagesActive: boolean;
   staff_id: string;
+
   constructor(private datePipe: DatePipe) {
     this.loadIncomes();
     this.loadIncomeCats();
@@ -75,6 +77,14 @@ export class IncomesComponent implements OnInit {
   }
   toFunction(date) {
     this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
+  }
+
+  sortData(sort: Sort) {
+    if (!sort.active || sort.direction === "") {
+      this.loadIncomes();
+      return;
+    }
+    this.getListOfIncomesWIthFilter("", "", "", sort.active, sort.direction);
   }
 
   // LOAD  INCOME CATS
@@ -137,7 +147,9 @@ export class IncomesComponent implements OnInit {
   getListOfIncomesWIthFilter(
     category_id: string,
     comment: string,
-    staff_id: string
+    staff_id: string,
+    sortField: string,
+    sortDirection: string
   ) {
     const filterLink =
       `&category_id=` +
@@ -145,7 +157,11 @@ export class IncomesComponent implements OnInit {
       `&comment=` +
       comment +
       `&staff_id=` +
-      staff_id;
+      staff_id +
+      `&sort=` +
+      sortField +
+      `&order=` +
+      sortDirection;
 
     return this.incomeService
       .getIncomesWithFilter(this.currentPage, filterLink)

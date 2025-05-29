@@ -1,5 +1,6 @@
 import { DatePipe } from "@angular/common";
 import { Component, inject, OnInit } from "@angular/core";
+import { Sort } from "@angular/material/sort";
 import { AuthService } from "src/app/services/auth.service";
 import { CategoriesService } from "src/app/services/categories.service";
 import { ExpenseService } from "src/app/services/expense.service";
@@ -32,6 +33,10 @@ export class ExpensesComponent implements OnInit {
   mypages = [];
   isPagesActive: boolean;
   adminId: string;
+
+  // sorting order
+  public sortField: string = "";
+  public sortDirection: "asc" | "desc" = "asc";
 
   constructor(private datePipe: DatePipe) {
     this.loadExpenses();
@@ -73,6 +78,14 @@ export class ExpensesComponent implements OnInit {
 
   toFunction(date) {
     this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
+  }
+
+  sortData(sort: Sort) {
+    if (!sort.active || sort.direction === "") {
+      this.loadExpenses();
+      return;
+    }
+    this.getListOfExpensesWIthFilter("", "", "", sort.active, sort.direction);
   }
 
   // LOAD  INCOME CATS
@@ -148,7 +161,9 @@ export class ExpensesComponent implements OnInit {
   getListOfExpensesWIthFilter(
     category_id: string,
     comment: string,
-    staff_id: string
+    staff_id: string,
+    sortField: string,
+    sortDirection: string
   ) {
     const filterLink =
       `&category_id=` +
@@ -156,7 +171,11 @@ export class ExpensesComponent implements OnInit {
       `&comment=` +
       comment +
       `&staff_id=` +
-      staff_id;
+      staff_id +
+      `&sort=` +
+      sortField +
+      `&order=` +
+      sortDirection;
 
     return this.expenseService
       .getExpensesWithFilter(this.currentPage, filterLink)

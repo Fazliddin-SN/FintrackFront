@@ -65,18 +65,6 @@ export const ownerROUTES: RouteInfo[] = [
     type: "link",
     icontype: "paid",
   },
-  {
-    path: "/tables",
-    title: "Tables",
-    type: "sub",
-    icontype: "grid_on",
-    collapse: "tables",
-    children: [
-      { path: "regular", title: "Regular Tables", ab: "RT" },
-      { path: "extended", title: "Extended Tables", ab: "ET" },
-      { path: "datatables.net", title: "Datatables.net", ab: "DT" },
-    ],
-  },
 ];
 // MANAGER ROUTES
 export const managerROUTES: RouteInfo[] = [

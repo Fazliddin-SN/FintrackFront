@@ -1,5 +1,6 @@
 import { DatePipe } from "@angular/common";
 import { Component, inject, OnInit } from "@angular/core";
+import { Sort } from "@angular/material/sort";
 import { ExpenseService } from "src/app/services/expense.service";
 
 declare interface TableData {
@@ -28,6 +29,10 @@ export class UserExpensesComponent implements OnInit {
   mypages = [];
   isPagesActive: boolean;
   staff_id: string;
+
+  // sorting order
+  public sortField: string = "";
+  public sortDirection: "asc" | "desc" = "asc";
 
   constructor(private datePipe: DatePipe) {
     this.loadExpenses();
@@ -64,6 +69,26 @@ export class UserExpensesComponent implements OnInit {
   toFunction(date) {
     this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
   }
+
+  // sortBy(field: string) {
+  //   if (this.sortField === field) {
+  //     this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
+  //   } else {
+  //     this.sortField = field;
+  //     this.sortDirection = "asc"; // default to ascending when switching field
+  //   }
+
+  //   this.getListOfExpensesWIthFilter("", this.sortField, this.sortDirection);
+  // }
+  sortData(sort: Sort) {
+    console.log("sort ", sort);
+    if (!sort.active || sort.direction === "") {
+      this.loadExpenses();
+      return;
+    }
+    this.getListOfExpensesWIthFilter("", sort.active, sort.direction);
+  }
+
   // LOADING EXPENSES WITHOUT FILTER
   loadExpenses() {
     this.expenseService.getMyExpenses(this.currentPage).subscribe({
@@ -112,8 +137,13 @@ export class UserExpensesComponent implements OnInit {
   }
 
   // LOAD EXPENSES WITH FILTER OF CATS, COMMENT AND ADMIN ID
-  getListOfExpensesWIthFilter(comment: string) {
-    const filterLink = `&comment=` + comment;
+  getListOfExpensesWIthFilter(
+    comment: string,
+    sortField: string,
+    sortDirection: string
+  ) {
+    const filterLink =
+      `&comment=` + comment + `&sort=` + sortField + `&order=` + sortDirection;
 
     return this.expenseService
       .getMyExpensesWithFilter(this.currentPage, filterLink)

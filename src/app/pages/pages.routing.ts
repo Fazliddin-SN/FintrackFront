@@ -13,18 +13,18 @@ export const PagesRoutes: Routes = [
         path: "login",
         component: LoginComponent,
       },
-      {
-        path: "lock",
-        component: LockComponent,
-      },
-      {
-        path: "register",
-        component: RegisterComponent,
-      },
-      {
-        path: "pricing",
-        component: PricingComponent,
-      },
+      // {
+      //   path: "lock",
+      //   component: LockComponent,
+      // },
+      // {
+      //   path: "register",
+      //   component: RegisterComponent,
+      // },
+      // {
+      //   path: "pricing",
+      //   component: PricingComponent,
+      // },
     ],
   },
 ];

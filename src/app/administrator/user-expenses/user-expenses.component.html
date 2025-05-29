@@ -22,7 +22,9 @@
                       matInput
                       type="text"
                       placeholder="Izoh bo'yicha..."
-                      (input)="getListOfExpensesWIthFilter($event.target.value)"
+                      (input)="
+                        getListOfExpensesWIthFilter($event.target.value, '', '')
+                      "
                     />
                   </mat-form-field>
                 </div>
@@ -96,13 +98,23 @@
                   cellspacing="0"
                   width="100%"
                   style="width: 100%"
+                  matSort
+                  (matSortChange)="sortData($event)"
                 >
                   <thead>
                     <tr>
-                      <th class="text-center">{{ tableData1.headerRow[0] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[1] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[2] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[3] }}</th>
+                      <th class="text-center" mat-sort-header="id">
+                        {{ tableData1.headerRow[0] }}
+                      </th>
+                      <th class="text-center" mat-sort-header="uzs_cash">
+                        {{ tableData1.headerRow[1] }}
+                      </th>
+                      <th class="text-center" mat-sort-header="usd_cash">
+                        {{ tableData1.headerRow[2] }}
+                      </th>
+                      <th class="text-center" mat-sort-header="card">
+                        {{ tableData1.headerRow[3] }}
+                      </th>
                       <th class="text-center">{{ tableData1.headerRow[4] }}</th>
                       <th class="text-center">{{ tableData1.headerRow[5] }}</th>
                       <th class="text-center">{{ tableData1.headerRow[6] }}</th>
