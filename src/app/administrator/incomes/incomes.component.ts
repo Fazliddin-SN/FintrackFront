@@ -231,7 +231,7 @@ export class IncomesComponent implements OnInit {
           account,
           userId,
           part_num,
-          adminId: this.staff_id,
+          admin_id: this.staff_id,
           date,
           comment,
           category_id,
@@ -240,12 +240,8 @@ export class IncomesComponent implements OnInit {
     });
 
     if (result.isConfirmed && result.value) {
-      if (!result.value.category_id || !result.value.adminId) {
-        Swal.fire(
-          "Xatolik",
-          "KATEGORIYA tanlanishi va admin IDsi kiritilishi kerak!",
-          "error"
-        );
+      if (!result.value.category_id) {
+        Swal.fire("Xatolik", "KATEGORIYA tanlanishi kerak!", "error");
         return;
       }
       Swal.showLoading();

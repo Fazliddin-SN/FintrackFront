@@ -131,7 +131,7 @@ export class UsersComponent implements OnInit {
       html: `
         <div class="form-group">
         <div style="display: flex; align-items: center" class="m-2">
-          <label for="input-card" style="width: 180px">Kartadan</label>
+          <label for="input-card" style="width: 180px">Username</label>
           <input
             id="username"
             type="text"
@@ -142,7 +142,7 @@ export class UsersComponent implements OnInit {
         </div>
 
         <div style="display: flex; align-items: center" class="m-2">
-          <label for="input-card" style="width: 180px">Kartadan</label>
+          <label for="input-card" style="width: 180px">Password</label>
           <input
             id="password"
             type="password"

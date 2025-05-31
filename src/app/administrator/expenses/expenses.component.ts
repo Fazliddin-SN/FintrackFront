@@ -34,10 +34,6 @@ export class ExpensesComponent implements OnInit {
   isPagesActive: boolean;
   adminId: string;
 
-  // sorting order
-  public sortField: string = "";
-  public sortDirection: "asc" | "desc" = "asc";
-
   constructor(private datePipe: DatePipe) {
     this.loadExpenses();
     this.loadExpenseCats();
@@ -93,6 +89,7 @@ export class ExpensesComponent implements OnInit {
     return this.expenseCatService.getExCats().subscribe({
       next: (res) => {
         this.expenseCats = res;
+        // console.log("Cats ", this.expenseCats);
       },
       error: (err) => {
         this.errorMessage = err.error.error;
@@ -117,6 +114,7 @@ export class ExpensesComponent implements OnInit {
     this.expenseService.getExpenses(this.currentPage).subscribe({
       next: (res) => {
         this.expenseList = res.expenses;
+        // console.log("expenses ", this.expenseList);
 
         this.currentPage = res.currentPage;
         this.totalPages = res.totalPages;
@@ -247,7 +245,7 @@ export class ExpensesComponent implements OnInit {
           uzs_cash,
           card,
           account,
-          adminId: +this.adminId,
+          admin_id: +this.adminId,
           date,
           staff_id,
           comment,
@@ -258,12 +256,8 @@ export class ExpensesComponent implements OnInit {
 
     if (result.isConfirmed && result.value) {
       // console.log("result value ", result.value);
-      if (!result.value.category_id || !result.value.adminId) {
-        Swal.fire(
-          "Xatolik",
-          "KATEGORIYA tanlanishi va STAFF_ID kiritilishi kerak!",
-          "error"
-        );
+      if (!result.value.category_id) {
+        Swal.fire("Xatolik", "KATEGORIYA tanlanishi kerak!", "error");
         return;
       }
       Swal.showLoading();
@@ -400,7 +394,7 @@ export class ExpensesComponent implements OnInit {
       if (!result.value.category_id || !result.value.date) {
         Swal.fire(
           "Xatolik",
-          "KATEGORIYA tanlanishi va SANA  kiritilishi kerak!",
+          "KATEGORIYA tanlanishi va SANA kiritilishi kerak!",
           "error"
         );
         return;

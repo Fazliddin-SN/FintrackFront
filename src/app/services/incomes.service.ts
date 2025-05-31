@@ -29,7 +29,7 @@ export class IncomesService {
   // all incomes
   getIncomes(currentPage: any): Observable<any> {
     return this.http.get(
-      `${this.baseUrl}/income?page=` + currentPage + "&size=15",
+      `${this.baseUrl}/income?page=` + currentPage + "&size=50",
       { headers: this.headers }
     );
   }
@@ -40,7 +40,7 @@ export class IncomesService {
     filterLink: string
   ): Observable<any> {
     return this.http.get<any>(
-      `${this.baseUrl}/income?page=` + currentPage + "&size=15" + filterLink,
+      `${this.baseUrl}/income?page=` + currentPage + "&size=50" + filterLink,
       { headers: this.headers }
     );
   }

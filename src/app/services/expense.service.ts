@@ -21,7 +21,7 @@ export class ExpenseService {
   // fetching all expenses
   getExpenses(currentPage: number): Observable<any> {
     return this.http.get(
-      `${this.baseUrl}/spending?page=` + currentPage + `&size=15`,
+      `${this.baseUrl}/spending?page=` + currentPage + `&size=50`,
       { headers: this.headers }
     );
   }
@@ -31,7 +31,7 @@ export class ExpenseService {
     filterLink: string
   ): Observable<any> {
     return this.http.get<any>(
-      `${this.baseUrl}/spending?page=` + currentPage + "&size=15" + filterLink,
+      `${this.baseUrl}/spending?page=` + currentPage + "&size=50" + filterLink,
       { headers: this.headers }
     );
   }
@@ -39,7 +39,7 @@ export class ExpenseService {
   // fetching all expenses
   getMyExpenses(currentPage: number): Observable<any> {
     return this.http.get(
-      `${this.baseUrl}/spending/my-spending?page=` + currentPage + `&size=15`,
+      `${this.baseUrl}/spending/my-spending?page=` + currentPage + `&size=50`,
       { headers: this.headers }
     );
   }
@@ -51,7 +51,7 @@ export class ExpenseService {
     return this.http.get<any>(
       `${this.baseUrl}/spending/my-spending?page=` +
         currentPage +
-        "&size=15" +
+        "&size=50" +
         filterLink,
       { headers: this.headers }
     );
