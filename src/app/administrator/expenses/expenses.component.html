@@ -36,7 +36,7 @@
                       <mat-option
                         *ngFor="let cat of expenseCats"
                         [value]="cat.id"
-                        (click)="getListOfExpensesWIthFilter(cat.id, '', '')"
+                        (click)="applyFilters(cat.id, '', '')"
                       >
                         {{ cat.name }}
                       </mat-option>
@@ -50,15 +50,7 @@
                       matInput
                       type="text"
                       placeholder="Izoh bo'yicha..."
-                      (input)="
-                        getListOfExpensesWIthFilter(
-                          '',
-                          $event.target.value,
-                          '',
-                          '',
-                          ''
-                        )
-                      "
+                      (input)="applyFilters('', $event.target.value, '')"
                     />
                   </mat-form-field>
                 </div>
@@ -70,15 +62,7 @@
                       matInput
                       type="text"
                       placeholder="Admin IDsi bo'yicha..."
-                      (input)="
-                        getListOfExpensesWIthFilter(
-                          '',
-                          '',
-                          $event.target.value,
-                          '',
-                          ''
-                        )
-                      "
+                      (input)="applyFilters('', '', $event.target.value)"
                     />
                   </mat-form-field>
                 </div>

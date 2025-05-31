@@ -75,13 +75,51 @@ export class ExpensesComponent implements OnInit {
   toFunction(date) {
     this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
   }
+  // Component-level filter and sort state
+  sortCategory_id: string = "";
+  sortComment: string = "";
+  sortStaff_id: string = "";
+  sortStartDate: string = "";
+  sortEndDate: string = "";
+  sortField: string = "";
+  sortDirection: string = "";
 
+  // Called when user sorts a column
   sortData(sort: Sort) {
     if (!sort.active || sort.direction === "") {
-      this.loadExpenses();
-      return;
+      this.sortField = "";
+      this.sortDirection = "";
+    } else {
+      this.sortField = sort.active;
+      this.sortDirection = sort.direction;
     }
-    this.getListOfExpensesWIthFilter("", "", "", sort.active, sort.direction);
+
+    // Reuse existing filter + sort values
+    this.getListOfExpensesWIthFilter(
+      this.sortCategory_id,
+      this.sortComment,
+      this.sortStaff_id,
+      this.sortField,
+      this.sortDirection
+    );
+  }
+
+  // Called when user applies a filter (e.g. selects category, comment, staff)
+  applyFilters(category_id: string, comment: string, staff_id: string) {
+    this.sortCategory_id = category_id;
+    this.sortComment = comment;
+    this.sortStaff_id = staff_id;
+
+    // Reuse last sort field + direction
+
+    // Reuse last sort field + direction
+    this.getListOfExpensesWIthFilter(
+      category_id,
+      comment,
+      staff_id,
+      this.sortField,
+      this.sortDirection
+    );
   }
 
   // LOAD  INCOME CATS
@@ -89,7 +127,7 @@ export class ExpensesComponent implements OnInit {
     return this.expenseCatService.getExCats().subscribe({
       next: (res) => {
         this.expenseCats = res;
-        // console.log("Cats ", this.expenseCats);
+        console.log("Cats ", this.expenseCats);
       },
       error: (err) => {
         this.errorMessage = err.error.error;
@@ -163,6 +201,10 @@ export class ExpensesComponent implements OnInit {
     sortField: string,
     sortDirection: string
   ) {
+    this.sortCategory_id = category_id;
+    this.sortComment = comment;
+    this.sortStaff_id = staff_id;
+
     const filterLink =
       `&category_id=` +
       category_id +
@@ -174,6 +216,9 @@ export class ExpensesComponent implements OnInit {
       sortField +
       `&order=` +
       sortDirection;
+
+    console.log("filter link ", filterLink);
+    console.log("sort cat ", this.sortCategory_id);
 
     return this.expenseService
       .getExpensesWithFilter(this.currentPage, filterLink)

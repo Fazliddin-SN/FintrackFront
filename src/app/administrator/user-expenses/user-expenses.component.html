@@ -22,9 +22,7 @@
                       matInput
                       type="text"
                       placeholder="Izoh bo'yicha..."
-                      (input)="
-                        getListOfExpensesWIthFilter($event.target.value, '', '')
-                      "
+                      (input)="applyFilters($event.target.value)"
                     />
                   </mat-form-field>
                 </div>

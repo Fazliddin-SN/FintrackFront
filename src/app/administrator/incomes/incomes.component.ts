@@ -79,12 +79,49 @@ export class IncomesComponent implements OnInit {
     this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
   }
 
+  // Component-level filter and sort state
+  sortCategory_id: string = "";
+  sortComment: string = "";
+  sortStaff_id: string = "";
+  sortField: string = "";
+  sortDirection: string = "";
+
+  // Called when user sorts a column
   sortData(sort: Sort) {
     if (!sort.active || sort.direction === "") {
-      this.loadIncomes();
-      return;
+      this.sortField = "";
+      this.sortDirection = "";
+    } else {
+      this.sortField = sort.active;
+      this.sortDirection = sort.direction;
     }
-    this.getListOfIncomesWIthFilter("", "", "", sort.active, sort.direction);
+
+    // Reuse existing filter + sort values
+    this.getListOfIncomesWIthFilter(
+      this.sortCategory_id,
+      this.sortComment,
+      this.sortStaff_id,
+      this.sortField,
+      this.sortDirection
+    );
+  }
+
+  // Called when user applies a filter (e.g. selects category, comment, staff)
+  applyFilters(category_id: string, comment: string, staff_id: string) {
+    this.sortCategory_id = category_id;
+    this.sortComment = comment;
+    this.sortStaff_id = staff_id;
+
+    // Reuse last sort field + direction
+
+    // Reuse last sort field + direction
+    this.getListOfIncomesWIthFilter(
+      category_id,
+      comment,
+      staff_id,
+      this.sortField,
+      this.sortDirection
+    );
   }
 
   // LOAD  INCOME CATS

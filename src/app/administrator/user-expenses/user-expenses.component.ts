@@ -30,10 +30,6 @@ export class UserExpensesComponent implements OnInit {
   isPagesActive: boolean;
   staff_id: string;
 
-  // sorting order
-  public sortField: string = "";
-  public sortDirection: "asc" | "desc" = "asc";
-
   constructor(private datePipe: DatePipe) {
     this.loadExpenses();
   }
@@ -70,23 +66,40 @@ export class UserExpensesComponent implements OnInit {
     this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
   }
 
-  // sortBy(field: string) {
-  //   if (this.sortField === field) {
-  //     this.sortDirection = this.sortDirection === "asc" ? "desc" : "asc";
-  //   } else {
-  //     this.sortField = field;
-  //     this.sortDirection = "asc"; // default to ascending when switching field
-  //   }
+  sortComment: string = "";
+  sortField: string = "";
+  sortDirection: string = "";
 
-  //   this.getListOfExpensesWIthFilter("", this.sortField, this.sortDirection);
-  // }
+  // Called when user sorts a column
   sortData(sort: Sort) {
-    console.log("sort ", sort);
     if (!sort.active || sort.direction === "") {
-      this.loadExpenses();
-      return;
+      this.sortField = "";
+      this.sortDirection = "";
+    } else {
+      this.sortField = sort.active;
+      this.sortDirection = sort.direction;
     }
-    this.getListOfExpensesWIthFilter("", sort.active, sort.direction);
+
+    // Reuse existing filter + sort values
+    this.getListOfExpensesWIthFilter(
+      this.sortComment,
+      this.sortField,
+      this.sortDirection
+    );
+  }
+
+  // Called when user applies a filter (e.g. selects category, comment, staff)
+  applyFilters(comment: string) {
+    this.sortComment = comment;
+
+    // Reuse last sort field + direction
+
+    // Reuse last sort field + direction
+    this.getListOfExpensesWIthFilter(
+      comment,
+      this.sortField,
+      this.sortDirection
+    );
   }
 
   // LOADING EXPENSES WITHOUT FILTER
