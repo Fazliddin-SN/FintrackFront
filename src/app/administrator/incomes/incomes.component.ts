@@ -104,6 +104,7 @@ export class IncomesComponent implements OnInit {
       this.sortField,
       this.sortDirection
     );
+    this.getListOfIncomesWithDate();
   }
 
   // Called when user applies a filter (e.g. selects category, comment, staff)
@@ -159,7 +160,14 @@ export class IncomesComponent implements OnInit {
   // LOADING INCOMES WITH DATE FILTER
   getListOfIncomesWithDate() {
     const filterLink =
-      `&startDate=` + this.danValue + `&endDate=` + this.gachaValue;
+      `&startDate=` +
+      this.danValue +
+      `&endDate=` +
+      this.gachaValue +
+      `&sort=` +
+      this.sortField +
+      `&order=` +
+      this.sortDirection;
 
     return this.incomeService
       .getIncomesWithFilter(this.currentPage, filterLink)

@@ -67,14 +67,14 @@ export class ExpensesComponent implements OnInit {
     document.getElementById("listcard").scrollIntoView();
     this.loadExpenses();
   }
-
+  // TRANSFORMING DATE VALUES
   fromFunction(date) {
     this.danValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
   }
-
   toFunction(date) {
     this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
   }
+
   // Component-level filter and sort state
   sortCategory_id: string = "";
   sortComment: string = "";
@@ -102,6 +102,8 @@ export class ExpensesComponent implements OnInit {
       this.sortField,
       this.sortDirection
     );
+
+    this.getListOfExpensesWithDate();
   }
 
   // Called when user applies a filter (e.g. selects category, comment, staff)
@@ -127,7 +129,6 @@ export class ExpensesComponent implements OnInit {
     return this.expenseCatService.getExCats().subscribe({
       next: (res) => {
         this.expenseCats = res;
-        console.log("Cats ", this.expenseCats);
       },
       error: (err) => {
         this.errorMessage = err.error.error;
@@ -172,7 +173,14 @@ export class ExpensesComponent implements OnInit {
   // LOADING EXPENSES WITH DATE FILTER
   getListOfExpensesWithDate() {
     const filterLink =
-      `&startDate=` + this.danValue + `&endDate=` + this.gachaValue;
+      `&startDate=` +
+      this.danValue +
+      `&endDate=` +
+      this.gachaValue +
+      `&sort=` +
+      this.sortField +
+      `&order=` +
+      this.sortDirection;
 
     return this.expenseService
       .getExpensesWithFilter(this.currentPage, filterLink)
@@ -216,9 +224,6 @@ export class ExpensesComponent implements OnInit {
       sortField +
       `&order=` +
       sortDirection;
-
-    console.log("filter link ", filterLink);
-    console.log("sort cat ", this.sortCategory_id);
 
     return this.expenseService
       .getExpensesWithFilter(this.currentPage, filterLink)
