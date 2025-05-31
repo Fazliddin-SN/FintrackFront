@@ -80,9 +80,15 @@ export class UserExpensesComponent implements OnInit {
       this.sortDirection = sort.direction;
     }
 
+    if (this.danValue || this.gachaValue) {
+      return this.getListOfExpensesWithDate();
+    }
+
     // Reuse existing filter + sort values
     this.getListOfExpensesWIthFilter(
       this.sortComment,
+      this.danValue,
+      this.gachaValue,
       this.sortField,
       this.sortDirection
     );
@@ -97,6 +103,8 @@ export class UserExpensesComponent implements OnInit {
     // Reuse last sort field + direction
     this.getListOfExpensesWIthFilter(
       comment,
+      this.danValue,
+      this.gachaValue,
       this.sortField,
       this.sortDirection
     );
@@ -127,7 +135,14 @@ export class UserExpensesComponent implements OnInit {
   // LOADING EXPENSES WITH DATE FILTER
   getListOfExpensesWithDate() {
     const filterLink =
-      `&startDate=` + this.danValue + `&endDate=` + this.gachaValue;
+      `&startDate=` +
+      this.danValue +
+      `&endDate=` +
+      this.gachaValue +
+      `&sort=` +
+      this.sortField +
+      `&order=` +
+      this.sortDirection;
 
     return this.expenseService
       .getMyExpensesWithFilter(this.currentPage, filterLink)
@@ -152,11 +167,22 @@ export class UserExpensesComponent implements OnInit {
   // LOAD EXPENSES WITH FILTER OF CATS, COMMENT AND ADMIN ID
   getListOfExpensesWIthFilter(
     comment: string,
+    startDate: string,
+    endDate: string,
     sortField: string,
     sortDirection: string
   ) {
     const filterLink =
-      `&comment=` + comment + `&sort=` + sortField + `&order=` + sortDirection;
+      `&comment=` +
+      comment +
+      `&startDate=` +
+      startDate +
+      `&endDate=` +
+      endDate +
+      `&sort=` +
+      sortField +
+      `&order=` +
+      sortDirection;
 
     return this.expenseService
       .getMyExpensesWithFilter(this.currentPage, filterLink)

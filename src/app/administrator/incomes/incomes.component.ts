@@ -96,11 +96,16 @@ export class IncomesComponent implements OnInit {
       this.sortDirection = sort.direction;
     }
 
+    if (this.danValue || this.gachaValue) {
+      return this.getListOfIncomesWithDate();
+    }
     // Reuse existing filter + sort values
     this.getListOfIncomesWIthFilter(
       this.sortCategory_id,
       this.sortComment,
       this.sortStaff_id,
+      this.danValue,
+      this.gachaValue,
       this.sortField,
       this.sortDirection
     );
@@ -120,6 +125,8 @@ export class IncomesComponent implements OnInit {
       category_id,
       comment,
       staff_id,
+      this.danValue,
+      this.gachaValue,
       this.sortField,
       this.sortDirection
     );
@@ -193,6 +200,8 @@ export class IncomesComponent implements OnInit {
     category_id: string,
     comment: string,
     staff_id: string,
+    startDate: string,
+    endDate: string,
     sortField: string,
     sortDirection: string
   ) {
@@ -203,6 +212,10 @@ export class IncomesComponent implements OnInit {
       comment +
       `&staff_id=` +
       staff_id +
+      `&startDate=` +
+      startDate +
+      `&endDate=` +
+      endDate +
       `&sort=` +
       sortField +
       `&order=` +

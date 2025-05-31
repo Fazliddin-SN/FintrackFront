@@ -94,16 +94,19 @@ export class ExpensesComponent implements OnInit {
       this.sortDirection = sort.direction;
     }
 
+    if (this.danValue || this.gachaValue) {
+      return this.getListOfExpensesWithDate();
+    }
     // Reuse existing filter + sort values
     this.getListOfExpensesWIthFilter(
       this.sortCategory_id,
       this.sortComment,
       this.sortStaff_id,
+      this.danValue,
+      this.gachaValue,
       this.sortField,
       this.sortDirection
     );
-
-    this.getListOfExpensesWithDate();
   }
 
   // Called when user applies a filter (e.g. selects category, comment, staff)
@@ -113,12 +116,13 @@ export class ExpensesComponent implements OnInit {
     this.sortStaff_id = staff_id;
 
     // Reuse last sort field + direction
-
     // Reuse last sort field + direction
     this.getListOfExpensesWIthFilter(
       category_id,
       comment,
       staff_id,
+      this.danValue,
+      this.gachaValue,
       this.sortField,
       this.sortDirection
     );
@@ -177,6 +181,12 @@ export class ExpensesComponent implements OnInit {
       this.danValue +
       `&endDate=` +
       this.gachaValue +
+      `&category_id=` +
+      this.sortCategory_id +
+      `&comment=` +
+      this.sortComment +
+      `&staff_id=` +
+      this.sortStaff_id +
       `&sort=` +
       this.sortField +
       `&order=` +
@@ -206,13 +216,11 @@ export class ExpensesComponent implements OnInit {
     category_id: string,
     comment: string,
     staff_id: string,
+    startDate: string,
+    endDate: string,
     sortField: string,
     sortDirection: string
   ) {
-    this.sortCategory_id = category_id;
-    this.sortComment = comment;
-    this.sortStaff_id = staff_id;
-
     const filterLink =
       `&category_id=` +
       category_id +
@@ -220,6 +228,10 @@ export class ExpensesComponent implements OnInit {
       comment +
       `&staff_id=` +
       staff_id +
+      `&startDate=` +
+      startDate +
+      `&endDate=` +
+      endDate +
       `&sort=` +
       sortField +
       `&order=` +
@@ -392,8 +404,8 @@ export class ExpensesComponent implements OnInit {
     </div>
 
      <div style="display: flex; align-items: center;" class="m-3">
-      <label for="swal-catId" style="width: 180px;">Xodimni Tanlang</label>
-      <select id="swal-catId" class="form-control">
+      <label for="swal-userId" style="width: 180px;">Xodimni Tanlang</label>
+      <select id="swal-userId" class="form-control">
         <option value="" disabled selected>Xodimni Tanlang</option>
         ${optionsHtmlUser}
       </select>
@@ -427,12 +439,14 @@ export class ExpensesComponent implements OnInit {
         let date = $("#input-date").val();
         let comment = $("#input-comment").val();
         let category_id = Number($("#swal-catId").val());
+        let staff_id = Number($("#swal-userId").val());
 
         return {
           usd_cash,
           uzs_cash,
           card,
           account,
+          staff_id,
           date,
           comment,
           category_id,
