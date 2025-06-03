@@ -29,18 +29,7 @@ export const ownerROUTES: RouteInfo[] = [
     type: "link",
     icontype: "dashboard",
   },
-  {
-    path: "/uzm/income-categories",
-    title: "Kirim Kategoriyalari",
-    type: "link",
-    icontype: "paid",
-  },
-  {
-    path: "/uzm/expense-categories",
-    title: "Chiqim Kategoriyalari",
-    type: "link",
-    icontype: "paid",
-  },
+
   {
     path: "/uzm/users",
     title: "Foydalanuvchilar",
@@ -62,6 +51,18 @@ export const ownerROUTES: RouteInfo[] = [
   {
     path: "/uzm/user-expenses",
     title: "Mening Chiqimlarim",
+    type: "link",
+    icontype: "paid",
+  },
+  {
+    path: "/uzm/income-categories",
+    title: "Kirim Kategoriyalari",
+    type: "link",
+    icontype: "category",
+  },
+  {
+    path: "/uzm/expense-categories",
+    title: "Chiqim Kategoriyalari",
     type: "link",
     icontype: "paid",
   },

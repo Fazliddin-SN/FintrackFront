@@ -7,6 +7,7 @@ import { Observable } from "rxjs";
 })
 export class GlobalEnvService {
   readonly baseUrl = "http://localhost:3018/api";
+  // readonly baseUrl = "http://185.196.213.248:3018/api";
   private http = inject(HttpClient);
   roles: string[] = [];
   constructor() {

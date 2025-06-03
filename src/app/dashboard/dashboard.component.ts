@@ -1,9 +1,12 @@
-import { Component, OnInit, AfterViewInit } from "@angular/core";
+import { Component, OnInit, AfterViewInit, inject } from "@angular/core";
 import { TableData } from "../md/md-table/md-table.component";
-import { LegendItem, ChartType } from "../md/md-chart/md-chart.component";
-
-import * as Chartist from "chartist";
-
+import { ChartConfiguration, ChartType } from "chart.js";
+import { ExpenseService } from "../services/expense.service";
+import { RouterOutlet } from "@angular/router";
+import {
+  CanvasJS,
+  CanvasJSAngularChartsModule,
+} from "@canvasjs/angular-charts";
 declare const $: any;
 
 @Component({
@@ -11,71 +14,100 @@ declare const $: any;
   templateUrl: "./dashboard.component.html",
 })
 export class DashboardComponent implements OnInit {
+  private expenseService = inject(ExpenseService);
+
   // constructor(private navbarTitleService: NavbarTitleService, private notificationService: NotificationService) { }
   public tableData: TableData;
   username: string;
-  startAnimationForLineChart(chart: any) {
-    let seq: any, delays: any, durations: any;
-    seq = 0;
-    delays = 80;
-    durations = 500;
-    chart.on("draw", function (data: any) {
-      if (data.type === "line" || data.type === "area") {
-        data.element.animate({
-          d: {
-            begin: 600,
-            dur: 700,
-            from: data.path
-              .clone()
-              .scale(1, 0)
-              .translate(0, data.chartRect.height())
-              .stringify(),
-            to: data.path.clone().stringify(),
-            easing: Chartist.Svg.Easing.easeOutQuint,
-          },
-        });
-      } else if (data.type === "point") {
-        seq++;
-        data.element.animate({
-          opacity: {
-            begin: seq * delays,
-            dur: durations,
-            from: 0,
-            to: 1,
-            easing: "ease",
-          },
-        });
-      }
-    });
+  expenses = [];
 
-    seq = 0;
-  }
-  startAnimationForBarChart(chart: any) {
-    let seq2: any, delays2: any, durations2: any;
-    seq2 = 0;
-    delays2 = 80;
-    durations2 = 500;
-    chart.on("draw", function (data: any) {
-      if (data.type === "bar") {
-        seq2++;
-        data.element.animate({
-          opacity: {
-            begin: seq2 * delays2,
-            dur: durations2,
-            from: 0,
-            to: 1,
-            easing: "ease",
-          },
-        });
-      }
-    });
+  totalBalance = 4000000; // Total balance in UZS
+  private USD_TO_UZS = 12500;
+  categoryTotals = {};
+  currentPage = 0;
+  errorMessage: string;
+  chartOptions: any;
 
-    seq2 = 0;
-  }
   // constructor(private navbarTitleService: NavbarTitleService) { }
   public ngOnInit() {
     this.username = localStorage.getItem("username");
+    // this.loadExpenses();
+    // this.makeNewArray();
   }
+
+  // // LOADING EXPENSES WITHOUT FILTER
+  // loadExpenses() {
+  //   this.expenseService.getMyExpenses(this.currentPage).subscribe({
+  //     next: (res) => {
+  //       this.expenses = res.expenses;
+  //       this.makeNewArray(); // ✅ now run after data is ready
+  //       this.renderChart("chartContainer");
+  //     },
+  //     error: (err) => {
+  //       this.errorMessage = err.error.error;
+  //     },
+  //   });
+  // }
+
+  // makeNewArray() {
+  //   this.expenses.forEach((exp) => {
+  //     const categoryId = exp.category_id;
+  //     const categoryName = exp.category?.name || "Unknown";
+
+  //     const usd = parseFloat(exp.usd_cash) || 0;
+  //     const uzs = parseFloat(exp.uzs_cash) || 0;
+  //     const card = parseFloat(exp.card) || 0;
+
+  //     const convertedUsd = usd * this.USD_TO_UZS;
+  //     const total = convertedUsd + uzs + card;
+
+  //     if (!this.categoryTotals[categoryId]) {
+  //       this.categoryTotals[categoryId] = {
+  //         category_id: categoryId,
+  //         category_name: categoryName,
+  //         amount: 0,
+  //       };
+  //     }
+
+  //     this.categoryTotals[categoryId].amount += total;
+  //   });
+
+  //   const result = Object.values(this.categoryTotals);
+
+  //   // Build CanvasJS-compatible dataPoints
+  //   const dataPoints = result.map((item: any) => ({
+  //     name: item.category_name,
+  //     y: parseFloat(((item.amount / this.totalBalance) * 100).toFixed(2)),
+  //   }));
+
+  //   // Assign CanvasJS chartOptions
+  //   this.chartOptions = {
+  //     animationEnabled: true,
+  //     theme: "light2",
+  //     exportEnabled: true,
+  //     title: {
+  //       text: "Category Spending Contribution (%)",
+  //     },
+  //     subtitles: [
+  //       {
+  //         text: "Based on UZS equivalent",
+  //       },
+  //     ],
+  //     data: [
+  //       {
+  //         type: "pie",
+  //         indexLabel: "{name}: {y}%",
+  //         dataPoints: dataPoints,
+  //       },
+  //     ],
+  //   };
+  // }
+
+  // renderChart(containerId: string) {
+  //   const chart = new CanvasJS.Chart(containerId, this.chartOptions);
+  //   chart.render();
+  // }
+
   //   this.tableData = {
   //     headerRow: ["ID", "Name", "Salary", "Country", "City"],
   //     dataRows: [

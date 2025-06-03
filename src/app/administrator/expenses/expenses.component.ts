@@ -133,6 +133,7 @@ export class ExpensesComponent implements OnInit {
     return this.expenseCatService.getExCats().subscribe({
       next: (res) => {
         this.expenseCats = res;
+        console.log("expense cats ", this.expenseCats);
       },
       error: (err) => {
         this.errorMessage = err.error.error;
@@ -157,7 +158,7 @@ export class ExpensesComponent implements OnInit {
     this.expenseService.getExpenses(this.currentPage).subscribe({
       next: (res) => {
         this.expenseList = res.expenses;
-        // console.log("expenses ", this.expenseList);
+        console.log("expenses ", this.expenseList);
 
         this.currentPage = res.currentPage;
         this.totalPages = res.totalPages;
@@ -318,8 +319,8 @@ export class ExpensesComponent implements OnInit {
 
     if (result.isConfirmed && result.value) {
       // console.log("result value ", result.value);
-      if (!result.value.category_id) {
-        Swal.fire("Xatolik", "KATEGORIYA tanlanishi kerak!", "error");
+      if (!result.value.category_id || !result.value.staff_id) {
+        Swal.fire("Xatolik", "KATEGORIYA va Xodim tanlanishi  kerak!", "error");
         return;
       }
       Swal.showLoading();
@@ -455,10 +456,14 @@ export class ExpensesComponent implements OnInit {
     });
 
     if (result.isConfirmed && result.value) {
-      if (!result.value.category_id || !result.value.date) {
+      if (
+        !result.value.category_id ||
+        !result.value.date ||
+        !result.value.staff_id
+      ) {
         Swal.fire(
           "Xatolik",
-          "KATEGORIYA tanlanishi va SANA kiritilishi kerak!",
+          "KATEGORIYA va XODIM tanlanishi va SANA kiritilishi kerak!",
           "error"
         );
         return;
