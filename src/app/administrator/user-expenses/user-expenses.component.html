@@ -68,6 +68,18 @@
                     <span class="material-icons"> manage_search </span>
                   </button>
                 </div>
+
+                <!-- downlaodExcel -->
+                <div class="col-sm-2 col-lg-1">
+                  <button
+                    mat-raised-button
+                    (click)="downlaodExcel()"
+                    class="btn btn-success btn-round btn-block"
+                  >
+                    <span class="material-icons"> download </span>
+                  </button>
+                </div>
+
                 <ul class="pagination" *ngIf="needPagination">
                   <!--  <li class="page-item">
                                     <a mat-button class="page-link" aria-label="Previous">
@@ -143,7 +155,7 @@
                       </td>
 
                       <td>{{ row.comment }}</td>
-                      <td>{{ row.adminId ? row.adminId : "" }}</td>
+                      <td>{{ row.admin_id ? row.admin_id : "" }}</td>
 
                       <td>{{ row.category.name }}</td>
                       <td>{{ row.date | date : "dd.MM.yyyy HH:MM" }}</td>

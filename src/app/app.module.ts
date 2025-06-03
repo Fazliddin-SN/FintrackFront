@@ -1,4 +1,4 @@
-import { NgModule } from "@angular/core";
+import { LOCALE_ID, NgModule } from "@angular/core";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { RouterModule } from "@angular/router";
 import { HttpClientModule } from "@angular/common/http";
@@ -52,6 +52,11 @@ import { IncomesService } from "./services/incomes.service";
 import { ExpenseService } from "./services/expense.service";
 import { GlobalEnvService } from "./globalenv.service";
 
+import { registerLocaleData } from "@angular/common";
+import localeUz from "@angular/common/locales/uz";
+
+// Register Uzbek locale
+registerLocaleData(localeUz);
 @NgModule({
   exports: [
     MatAutocompleteModule,
@@ -112,6 +117,7 @@ export class MaterialModule {}
     IncomesService,
     ExpenseService,
     GlobalEnvService,
+    { provide: LOCALE_ID, useValue: "uz" },
   ],
   bootstrap: [AppComponent],
 })

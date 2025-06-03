@@ -5,6 +5,10 @@ import { AuthService } from "src/app/services/auth.service";
 import { CategoriesService } from "src/app/services/categories.service";
 import { ExpenseService } from "src/app/services/expense.service";
 import Swal from "sweetalert2";
+
+import * as XLSX from "xlsx";
+import * as FileSaver from "file-saver";
+
 declare interface TableData {
   headerRow: string[];
 }
@@ -33,6 +37,9 @@ export class ExpensesComponent implements OnInit {
   mypages = [];
   isPagesActive: boolean;
   adminId: string;
+
+  // STORING FILTERED INCOME DATA
+  filteredExpenses: any[];
 
   constructor(private datePipe: DatePipe) {
     this.loadExpenses();
@@ -158,8 +165,7 @@ export class ExpensesComponent implements OnInit {
     this.expenseService.getExpenses(this.currentPage).subscribe({
       next: (res) => {
         this.expenseList = res.expenses;
-        console.log("expenses ", this.expenseList);
-
+        this.filteredExpenses = [];
         this.currentPage = res.currentPage;
         this.totalPages = res.totalPages;
         if (this.totalPages > 1) {
@@ -198,6 +204,7 @@ export class ExpensesComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.expenseList = res.expenses;
+          this.filteredExpenses = res.expenses;
           this.currentPage = res.currentPage;
           this.totalPages = res.totalPages;
           if (this.totalPages > 1) {
@@ -243,6 +250,7 @@ export class ExpensesComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.expenseList = res.expenses;
+          this.filteredExpenses = res.expenses;
           this.currentPage = res.currentPage;
           this.totalPages = res.totalPages;
           if (this.totalPages > 1) {
@@ -256,6 +264,75 @@ export class ExpensesComponent implements OnInit {
           this.errorMessage = err.error.error;
         },
       });
+  }
+
+  // UPLOADING FILTERED INCOME DATA IN EXEL FILE
+  exportToExel(data: any[], fileName: string): void {
+    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
+    // Set column widths manually
+    worksheet["!cols"] = [
+      { wch: 10 }, // Soʻmda
+      { wch: 10 }, // Dollar
+      { wch: 10 }, // Karta
+      { wch: 20 }, // Hisobdan
+      { wch: 10 }, // Xodim ID
+      { wch: 10 }, // Admin ID
+      { wch: 20 }, // Kategoriya
+      { wch: 30 }, // Izoh
+      { wch: 15 }, // Sana
+    ];
+
+    const workbook: XLSX.WorkBook = {
+      Sheets: { data: worksheet },
+      SheetNames: ["data"],
+    };
+
+    const exelBuffer: any = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const blob: Blob = new Blob([exelBuffer], {
+      type: "application/octet-stream",
+    });
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    const fullName = `${fileName}_${timestamp}.xlsx`;
+
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fullName;
+    link.click();
+
+    FileSaver.saveAs(blob, `${fullName}.xlsx`);
+  }
+  // format date
+  fmd(date: any) {
+    return this.datePipe.transform(date, "d MMMM, y"); // Example: "31 may, 2025"
+  }
+  // formate currency
+  formatCurrency = (val: any) => {
+    return val ? val.toLocaleString("uz-UZ") : "";
+  };
+
+  // DOWNLOAD EXEL
+  downlaodExcel() {
+    if (this.filteredExpenses.length) {
+      const filteredData = this.filteredExpenses.map((exp) => ({
+        Somda: this.formatCurrency(+exp.uzs_cash) || 0,
+        Dollarda: this.formatCurrency(+exp.usd_cash) || 0,
+        Kartadan: this.formatCurrency(+exp.card) || 0,
+        "Kompaniya Hisobidan": this.formatCurrency(+exp.account) || 0,
+        "XODIM ID": exp.staff_id,
+        "Admin ID": exp.admin_id,
+        Kategoriyasi: exp.category.name,
+        Izoh: exp.comment,
+        Sanasi: this.fmd(exp.date),
+      }));
+      this.exportToExel(filteredData, "Xarajatlar");
+      return;
+    }
+    alert("No data");
   }
 
   // ADDING NEW EXPENSE
