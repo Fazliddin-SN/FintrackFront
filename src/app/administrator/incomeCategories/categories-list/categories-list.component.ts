@@ -3,9 +3,11 @@ import { Router } from "@angular/router";
 import { CategoriesService } from "src/app/services/categories.service";
 import Swal from "sweetalert2";
 import { firstValueFrom } from "rxjs";
+import { ExpenseCategoriesComponent } from "../../expenseCategories/expense-categories/expense-categories.component";
 @Component({
   selector: "app-categories-list",
   templateUrl: "./categories-list.component.html",
+
   styleUrls: ["./categories-list.component.css"],
 })
 export class CategoriesListComponent implements OnInit {

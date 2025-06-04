@@ -3,6 +3,7 @@
     <div class="row">
       <div class="col-md-12">
         <div class="card" id="listcard">
+          <!-- header -->
           <div class="card-header card-header-blue card-header-icon">
             <div class="card-text">
               <h4 class="card-title">Kirimlar Ro'yxati</h4>
@@ -18,6 +19,7 @@
             </button>
           </div>
 
+          <!-- card body -->
           <div class="card-body">
             <div class="material-datatables">
               <div class="row">
@@ -54,7 +56,7 @@
                 </div>
 
                 <!-- filter based on book title -->
-                <div class="col-sm-4 col-lg-2" style="display: inline-flex">
+                <div class="col-sm-2 col-lg-1" style="display: inline-flex">
                   <mat-form-field class="example-full-width">
                     <input
                       matInput
@@ -65,7 +67,7 @@
                   </mat-form-field>
                 </div>
 
-                <div lass="col-sm-3 col-lg-2">
+                <div class="col-sm-3 col-lg-2">
                   <mat-form-field>
                     <input
                       matInput
@@ -115,28 +117,35 @@
                     <span class="material-icons"> download </span>
                   </button>
                 </div>
-                <ul class="pagination" *ngIf="needPagination">
+              </div>
+
+              <div class="row">
+                <ul
+                  class="pagination justify-content-center"
+                  *ngIf="needPagination"
+                >
                   <!--  <li class="page-item">
-                                <a mat-button class="page-link" aria-label="Previous">
-                                  <span aria-hidden="true"><i class="fa fa-angle-double-left" aria-hidden="true"></i></span>
-                                </a>
-                              </li> -->
+                              <a mat-button class="page-link" aria-label="Previous">
+                                <span aria-hidden="true"><i class="fa fa-angle-double-left" aria-hidden="true"></i></span>
+                              </a>
+                            </li> -->
                   <li
                     class="page-item"
                     [ngClass]="{ active: currentPage == i }"
                     *ngFor="let page of mypages; index as i"
                   >
-                    <a mat-button class="page-link" (click)="pagebyNum(i)">{{
-                      i + 1
-                    }}</a>
+                    <button mat-button class="page-link" (click)="pagebyNum(i)">
+                      {{ i + 1 }}
+                    </button>
                   </li>
                   <!-- <li class="page-item">
-                                <a mat-button class="page-link" aria-label="Next">
-                                  <span aria-hidden="true"><i class="fa fa-angle-double-right" aria-hidden="true"></i></span>
-                                </a>
-                              </li> -->
+                              <a mat-button class="page-link" aria-label="Next">
+                                <span aria-hidden="true"><i class="fa fa-angle-double-right" aria-hidden="true"></i></span>
+                              </a>
+                            </li> -->
                 </ul>
               </div>
+
               <div class="table-responsive">
                 <table
                   class="table table-striped table-no-bordered table-hover"
@@ -163,15 +172,27 @@
                       <th class="text-center" mat-sort-header="account">
                         {{ tableData1.headerRow[4] }}
                       </th>
-                      <th class="text-center">{{ tableData1.headerRow[5] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[6] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[7] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[8] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[9] }}</th>
+                      <th class="text-center">
+                        {{ tableData1.headerRow[5] }}
+                      </th>
+                      <th class="text-center">
+                        {{ tableData1.headerRow[6] }}
+                      </th>
+                      <th class="text-center">
+                        {{ tableData1.headerRow[7] }}
+                      </th>
+                      <th class="text-center">
+                        {{ tableData1.headerRow[8] }}
+                      </th>
+                      <th class="text-center">
+                        {{ tableData1.headerRow[9] }}
+                      </th>
                       <th class="text-center">
                         {{ tableData1.headerRow[10] }}
                       </th>
-                      <th class="text-right">{{ tableData1.headerRow[11] }}</th>
+                      <th class="text-right">
+                        {{ tableData1.headerRow[11] }}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -229,8 +250,8 @@
               </div>
             </div>
           </div>
+          <p class="backend-error" *ngIf="errorMessage">{{ errorMessage }}</p>
         </div>
-        <p class="backend-error" *ngIf="errorMessage">{{ errorMessage }}</p>
       </div>
     </div>
   </div>

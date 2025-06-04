@@ -1,7 +1,5 @@
 import { Routes } from "@angular/router";
 
-import { CategoriesListComponent } from "./incomeCategories/categories-list/categories-list.component";
-import { ExpenseCategoriesComponent } from "./expenseCategories/expense-categories/expense-categories.component";
 import { UsersComponent } from "./users/users.component";
 import { IncomesComponent } from "./incomes/incomes.component";
 import { ExpensesComponent } from "./expenses/expenses.component";
@@ -10,22 +8,24 @@ import { UserExpensesComponent } from "./user-expenses/user-expenses.component";
 import { OwnerAuthGuardService } from "../services/owner-auth-guard.service";
 import { ManagerAuthGuardService } from "../services/manager-auth-gaurd.service";
 import { UserAuthGuardService } from "../services/user-auth-guard.service";
+import { AuditorAuthGuardService } from "../services/auditor.guard.service";
+import { AllIncomesComponent } from "./auditor/all-incomes/all-incomes.component";
+
+import { NewIncomesComponent } from "./auditor/new-incomes/new-incomes.component";
+import { SuspiciousIncomesComponent } from "./auditor/suspicious-incomes/suspicious-incomes.component";
+import { FailedIncomesComponent } from "./auditor/failed-incomes/failed-incomes.component";
+import { SettingsComponent } from "./settings/settings.component";
+import { BalanceControlComponent } from "./balance-control/balance-control.component";
 
 export const administratorRoutes: Routes = [
   {
     path: "",
     children: [
       {
-        path: "income-categories",
+        path: "settings",
         canActivate: [OwnerAuthGuardService],
-        component: CategoriesListComponent,
-        data: { title: "Kirim Kategoriyalari" },
-      },
-      {
-        path: "expense-categories",
-        canActivate: [OwnerAuthGuardService],
-        component: ExpenseCategoriesComponent,
-        data: { title: "Chiqim Kategoriyalari" },
+        component: SettingsComponent,
+        data: { title: "Sozlamalar" },
       },
       {
         path: "users",
@@ -51,12 +51,53 @@ export const administratorRoutes: Routes = [
           title: "Chiqimlar",
         },
       },
+
+      {
+        path: "total-balance",
+        canActivate: [OwnerAuthGuardService],
+        component: BalanceControlComponent,
+        data: {
+          title: "Umumiy Hisob Jadvali",
+        },
+      },
       {
         path: "user-expenses",
         canActivate: [UserAuthGuardService],
         component: UserExpensesComponent,
         data: {
           title: "Mening chiqimlarim",
+        },
+      },
+      {
+        path: "auditor-all-incomes",
+        canActivate: [AuditorAuthGuardService],
+        component: AllIncomesComponent,
+        data: {
+          title: "Umumiya Kirimlar",
+        },
+      },
+      {
+        path: "auditor-new-incomes",
+        canActivate: [AuditorAuthGuardService],
+        component: NewIncomesComponent,
+        data: {
+          title: "Yangi Kiritilgan Kirimlar",
+        },
+      },
+      {
+        path: "auditor-sus-incomes",
+        canActivate: [AuditorAuthGuardService],
+        component: SuspiciousIncomesComponent,
+        data: {
+          title: "Gumonli Kirimlar",
+        },
+      },
+      {
+        path: "auditor-failed-incomes",
+        canActivate: [AuditorAuthGuardService],
+        component: FailedIncomesComponent,
+        data: {
+          title: "Failed Kirimlar",
         },
       },
     ],

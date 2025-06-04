@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from "@angular/common/http";
+import { HttpClient, HttpHeaders, HttpParams } from "@angular/common/http";
 import { Injectable } from "@angular/core";
 import { Observable } from "rxjs";
 import { GlobalEnvService } from "../globalenv.service";
@@ -60,5 +60,17 @@ export class IncomesService {
     return this.http.delete(`${this.baseUrl}/income/${id}`, {
       headers: this.headers,
     });
+  }
+
+  // CHEKC INCOME REALIBILITY
+  checkStatus(id: number, status: number): Observable<any> {
+    return this.http.post(
+      `${this.baseUrl}/income/status/${id}`,
+      {},
+      {
+        headers: this.headers,
+        params: new HttpParams().set("checkedStatus", status),
+      }
+    );
   }
 }

@@ -1,6 +1,89 @@
 <div class="main-content book-page">
   <div class="container-fluid">
     <div class="row">
+      <div class="col-lg-3 col-md-6 col-sm-3">
+        <div class="card card-stats">
+          <div class="card-header card-header-warning card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">money</i>
+            </div>
+            <p class="card-category">Naqd so'mda</p>
+            <h3 class="card-title">
+              {{
+                currentBalance?.uzs_cash | currency : " " : "symbol" : "1.0-0"
+              }}
+            </h3>
+          </div>
+          <div class="card-footer">
+            <!-- <div class="stats">
+            <i class="material-icons text-danger">warning</i>
+            <a href="#pablo">Get More Space...</a>
+          </div> -->
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6 col-sm-3">
+        <div class="card card-stats">
+          <div class="card-header card-header-rose card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">paid</i>
+            </div>
+            <p class="card-category">Naqd USD</p>
+            <h3 class="card-title">
+              ${{
+                currentBalance?.usd_cash | currency : " " : "symbol" : "1.0-0"
+              }}
+            </h3>
+          </div>
+          <div class="card-footer">
+            <!-- <div class="stats">
+            <i class="material-icons">local_offer</i> Tracked from Google
+            Analytics
+          </div> -->
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6 col-sm-3">
+        <div class="card card-stats">
+          <div class="card-header card-header-success card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">credit_card</i>
+            </div>
+            <p class="card-category">Kartada</p>
+            <h3 class="card-title">
+              {{ currentBalance?.card | currency : " " : "symbol" : "1.0-0" }}
+            </h3>
+          </div>
+          <div class="card-footer">
+            <!-- <div class="stats">
+            <i class="material-icons">date_range</i> Last 24 Hours
+          </div> -->
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-3 col-md-6 col-sm-3">
+        <div class="card card-stats">
+          <div class="card-header card-header-info card-header-icon">
+            <div class="card-icon">
+              <i class="material-icons">apartment</i>
+            </div>
+            <p class="card-category">Xisob Raqam</p>
+            <h3 class="card-title">
+              {{
+                currentBalance?.account | currency : " " : "symbol" : "1.0-0"
+              }}
+            </h3>
+          </div>
+          <div class="card-footer">
+            <!-- <div class="stats">
+            <i class="material-icons">update</i> Just Updated
+          </div> -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
       <div class="col-md-12">
         <div class="card" id="listcard">
           <div class="card-header card-header-blue card-header-icon">
@@ -10,64 +93,12 @@
                 Bu yerda CHIQIMLAR Ro'yxati saqlanadi!
               </p>
             </div>
-            <button
-              (click)="addExpense()"
-              class="card-text mat-button card-header-success"
-            >
-              <h4 style="font-weight: bold" class="card-title">
-                Chiqim qo'shish +
-              </h4>
-            </button>
           </div>
 
           <div class="card-body">
             <div class="material-datatables">
               <div class="row">
-                <!-- Filter based on book category -->
-                <div class="col-sm-4 col-lg-2">
-                  <mat-form-field>
-                    <mat-select
-                      placeholder="Kategoriyasi bo'yicha"
-                      name="category"
-                    >
-                      <mat-option [value]="null" (click)="loadExpenses()"
-                        >None</mat-option
-                      >
-                      <mat-option
-                        *ngFor="let cat of expenseCats"
-                        [value]="cat.id"
-                        (click)="applyFilters(cat.id, '', '')"
-                      >
-                        {{ cat.name }}
-                      </mat-option>
-                    </mat-select>
-                  </mat-form-field>
-                </div>
-                <!-- filter based on book title -->
-                <div class="col-sm-4 col-lg-2" style="display: inline-flex">
-                  <mat-form-field class="example-full-width">
-                    <input
-                      matInput
-                      type="text"
-                      placeholder="Izoh bo'yicha..."
-                      (input)="applyFilters('', $event.target.value, '')"
-                    />
-                  </mat-form-field>
-                </div>
-
-                <!-- filter based on book title -->
-                <div class="col-sm-4 col-lg-2" style="display: inline-flex">
-                  <mat-form-field class="example-full-width">
-                    <input
-                      matInput
-                      type="text"
-                      placeholder="Admin IDsi bo'yicha..."
-                      (input)="applyFilters('', '', $event.target.value)"
-                    />
-                  </mat-form-field>
-                </div>
-
-                <div class="col-sm-3 col-lg-1">
+                <div class="col-sm-3 col-lg-3">
                   <mat-form-field>
                     <input
                       matInput
@@ -83,7 +114,7 @@
                     <mat-datepicker #danPicker></mat-datepicker>
                   </mat-form-field>
                 </div>
-                <div class="col-sm-3 col-lg-2">
+                <div class="col-sm-3 col-lg-3">
                   <mat-form-field>
                     <input
                       matInput
@@ -99,17 +130,17 @@
                     <mat-datepicker #gachaPicker></mat-datepicker>
                   </mat-form-field>
                 </div>
-                <div class="col-sm-2 col-lg-1">
+                <div class="col-sm-3 col-lg-3">
                   <button
                     mat-raised-button
-                    (click)="getListOfExpensesWithDate()"
+                    (click)="getListOfIncomesWithDate()"
                     class="btn btn-success btn-round btn-block"
                   >
                     <span class="material-icons"> manage_search </span>
                   </button>
                 </div>
                 <!-- downlaodExcel -->
-                <div class="col-sm-2 col-lg-1">
+                <div class="col-sm-3 col-lg-2">
                   <button
                     mat-raised-button
                     (click)="downlaodExcel()"
@@ -119,31 +150,27 @@
                   </button>
                 </div>
               </div>
-              <!-- Pagination -->
               <div class="row">
-                <ul
-                  class="pagination justify-content-center"
-                  *ngIf="needPagination"
-                >
+                <ul class="pagination" *ngIf="needPagination">
                   <!--  <li class="page-item">
-                              <a mat-button class="page-link" aria-label="Previous">
-                                <span aria-hidden="true"><i class="fa fa-angle-double-left" aria-hidden="true"></i></span>
-                              </a>
-                            </li> -->
+                                  <a mat-button class="page-link" aria-label="Previous">
+                                    <span aria-hidden="true"><i class="fa fa-angle-double-left" aria-hidden="true"></i></span>
+                                  </a>
+                                </li> -->
                   <li
                     class="page-item"
                     [ngClass]="{ active: currentPage == i }"
                     *ngFor="let page of mypages; index as i"
                   >
-                    <button mat-button class="page-link" (click)="pagebyNum(i)">
-                      {{ i + 1 }}
-                    </button>
+                    <a mat-button class="page-link" (click)="pagebyNum(i)">{{
+                      i + 1
+                    }}</a>
                   </li>
                   <!-- <li class="page-item">
-                              <a mat-button class="page-link" aria-label="Next">
-                                <span aria-hidden="true"><i class="fa fa-angle-double-right" aria-hidden="true"></i></span>
-                              </a>
-                            </li> -->
+                                  <a mat-button class="page-link" aria-label="Next">
+                                    <span aria-hidden="true"><i class="fa fa-angle-double-right" aria-hidden="true"></i></span>
+                                  </a>
+                                </li> -->
                 </ul>
               </div>
               <div class="table-responsive">
@@ -172,16 +199,14 @@
                       <th class="text-center" mat-sort-header="account">
                         {{ tableData1.headerRow[4] }}
                       </th>
-                      <th class="text-center">{{ tableData1.headerRow[5] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[6] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[7] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[8] }}</th>
-                      <th class="text-center">{{ tableData1.headerRow[9] }}</th>
+                      <th class="text-center">
+                        {{ tableData1.headerRow[5] }}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
-                      *ngFor="let row of expenseList; let i = index"
+                      *ngFor="let row of totalBalance; let i = index"
                       class="text-center"
                     >
                       <td
@@ -204,29 +229,26 @@
                       <td>
                         {{ row.account | currency : " " : "symbol" : "1.0-0" }}
                       </td>
-                      <td>{{ row.comment }}</td>
-                      <td>{{ row.admin_id ? row.admin_id : "" }}</td>
-
-                      <td>{{ row.category.name }}</td>
                       <td>{{ row.date | date : "dd.MM.yyyy HH:MM" }}</td>
-                      <td class="td-actions text-right">
-                        <button
-                          mat-raised-button
-                          type="button"
-                          class="btn btn-link btn-success btn-just-icon"
-                          (click)="editExpense(row)"
-                        >
-                          <i class="material-icons">edit</i>
-                        </button>
-                        <button
-                          mat-raised-button
-                          type="button"
-                          class="btn btn-link btn-danger btn-just-icon"
-                          (click)="delete(row.id)"
-                        >
-                          <i class="material-icons">delete</i>
-                        </button>
-                      </td>
+
+                      <!-- <td class="td-actions text-right">
+                      <button
+                        mat-raised-button
+                        type="button"
+                        class="btn btn-link btn-success btn-just-icon"
+                        (click)="editIncome(row)"
+                      >
+                        <i class="material-icons">edit</i>
+                      </button>
+                      <button
+                        mat-raised-button
+                        type="button"
+                        class="btn btn-link btn-danger btn-just-icon"
+                        (click)="delete(row.id)"
+                      >
+                        <i class="material-icons">delete</i>
+                      </button>
+                    </td> -->
                     </tr>
                   </tbody>
                 </table>

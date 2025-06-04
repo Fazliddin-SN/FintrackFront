@@ -27,7 +27,7 @@
                   </mat-form-field>
                 </div>
 
-                <div lass="col-sm-3 col-lg-2">
+                <div class="col-sm-3 col-lg-2">
                   <mat-form-field>
                     <input
                       matInput
@@ -59,7 +59,7 @@
                     <mat-datepicker #gachaPicker></mat-datepicker>
                   </mat-form-field>
                 </div>
-                <div class="col-sm-2 col-lg-2">
+                <div class="col-sm-2 col-lg-1">
                   <button
                     mat-raised-button
                     (click)="getListOfExpensesWithDate()"
@@ -79,27 +79,32 @@
                     <span class="material-icons"> download </span>
                   </button>
                 </div>
-
-                <ul class="pagination" *ngIf="needPagination">
+              </div>
+              <!-- Pagination -->
+              <div class="row">
+                <ul
+                  class="pagination justify-content-center"
+                  *ngIf="needPagination"
+                >
                   <!--  <li class="page-item">
-                                    <a mat-button class="page-link" aria-label="Previous">
-                                      <span aria-hidden="true"><i class="fa fa-angle-double-left" aria-hidden="true"></i></span>
-                                    </a>
-                                  </li> -->
+                              <a mat-button class="page-link" aria-label="Previous">
+                                <span aria-hidden="true"><i class="fa fa-angle-double-left" aria-hidden="true"></i></span>
+                              </a>
+                            </li> -->
                   <li
                     class="page-item"
                     [ngClass]="{ active: currentPage == i }"
                     *ngFor="let page of mypages; index as i"
                   >
-                    <a mat-button class="page-link" (click)="pagebyNum(i)">{{
-                      i + 1
-                    }}</a>
+                    <button mat-button class="page-link" (click)="pagebyNum(i)">
+                      {{ i + 1 }}
+                    </button>
                   </li>
                   <!-- <li class="page-item">
-                                    <a mat-button class="page-link" aria-label="Next">
-                                      <span aria-hidden="true"><i class="fa fa-angle-double-right" aria-hidden="true"></i></span>
-                                    </a>
-                                  </li> -->
+                              <a mat-button class="page-link" aria-label="Next">
+                                <span aria-hidden="true"><i class="fa fa-angle-double-right" aria-hidden="true"></i></span>
+                              </a>
+                            </li> -->
                 </ul>
               </div>
               <div class="table-responsive">

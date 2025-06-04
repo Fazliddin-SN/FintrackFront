@@ -29,13 +29,6 @@ export const ownerROUTES: RouteInfo[] = [
     type: "link",
     icontype: "dashboard",
   },
-
-  {
-    path: "/uzm/users",
-    title: "Foydalanuvchilar",
-    type: "link",
-    icontype: "people",
-  },
   {
     path: "/uzm/incomes",
     title: "Kirimlar",
@@ -49,22 +42,28 @@ export const ownerROUTES: RouteInfo[] = [
     icontype: "paid",
   },
   {
+    path: "/uzm/total-balance",
+    title: "Umumiy Hisob jadvali",
+    type: "link",
+    icontype: "paid",
+  },
+  {
     path: "/uzm/user-expenses",
     title: "Mening Chiqimlarim",
     type: "link",
     icontype: "paid",
   },
   {
-    path: "/uzm/income-categories",
-    title: "Kirim Kategoriyalari",
+    path: "/uzm/users",
+    title: "Foydalanuvchilar",
     type: "link",
-    icontype: "category",
+    icontype: "people",
   },
   {
-    path: "/uzm/expense-categories",
-    title: "Chiqim Kategoriyalari",
+    path: "/uzm/settings",
+    title: "Sozlamalar",
     type: "link",
-    icontype: "paid",
+    icontype: "settings",
   },
 ];
 // MANAGER ROUTES
@@ -111,8 +110,8 @@ export const userROUTES: RouteInfo[] = [
   },
 ];
 
-//Menu Items
-export const ROUTES: RouteInfo[] = [
+// AUDITOR
+export const auditorROUTES: RouteInfo[] = [
   {
     path: "/dashboard",
     title: "Dashboard",
@@ -120,32 +119,26 @@ export const ROUTES: RouteInfo[] = [
     icontype: "dashboard",
   },
   {
-    path: "/uzm/income-categories",
-    title: "Kirim Kategoriyalari",
+    path: "/uzm/auditor-all-incomes",
+    title: "Hamma kirimlar",
     type: "link",
     icontype: "paid",
   },
   {
-    path: "/uzm/expense-categories",
-    title: "Chiqim Kategoriyalari",
+    path: "/uzm/auditor-new-incomes",
+    title: "Yangi Kirimlar",
     type: "link",
     icontype: "paid",
   },
   {
-    path: "/uzm/users",
-    title: "Foydalanuvchilar",
-    type: "link",
-    icontype: "people",
-  },
-  {
-    path: "/uzm/incomes",
-    title: "Kirimlar",
+    path: "/uzm/auditor-sus-incomes",
+    title: "Gumonli Kirimlar",
     type: "link",
     icontype: "paid",
   },
   {
-    path: "/uzm/expenses",
-    title: "Chiqimlar",
+    path: "/uzm/auditor-failed-incomes",
+    title: "Failed Kirimlar",
     type: "link",
     icontype: "paid",
   },
@@ -154,6 +147,16 @@ export const ROUTES: RouteInfo[] = [
     title: "Mening Chiqimlarim",
     type: "link",
     icontype: "paid",
+  },
+];
+
+//Menu Items
+export const ROUTES: RouteInfo[] = [
+  {
+    path: "/dashboard",
+    title: "Dashboard",
+    type: "link",
+    icontype: "dashboard",
   },
   {
     path: "/components",
@@ -268,6 +271,8 @@ export class SidebarComponent implements OnInit {
       this.menuItems = userROUTES.filter((menuItem) => menuItem);
     } else if (this.roleId === "3") {
       this.menuItems = managerROUTES.filter((menuItem) => menuItem);
+    } else if (this.roleId === "5") {
+      this.menuItems = auditorROUTES.filter((menuItem) => menuItem);
     } else {
       this.menuItems = ROUTES.filter((menuItem) => menuItem);
     }

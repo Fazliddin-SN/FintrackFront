@@ -5,19 +5,19 @@
         <div class="card" id="listcard">
           <div class="card-header card-header-blue card-header-icon">
             <div class="card-text">
-              <h4 class="card-title">Chiqimlar Ro'yxati</h4>
+              <h4 class="card-title">Yangi Kirimlar Ro'yxati</h4>
               <p class="card-category">
-                Bu yerda CHIQIMLAR Ro'yxati saqlanadi!
+                Bu yerda Yangi Qo'shilgan Kirimlar Ro'yxati saqlanadi!
               </p>
             </div>
-            <button
-              (click)="addExpense()"
-              class="card-text mat-button card-header-success"
-            >
-              <h4 style="font-weight: bold" class="card-title">
-                Chiqim qo'shish +
-              </h4>
-            </button>
+            <!-- <button
+                (click)="addIncome()"
+                class="card-text mat-button card-header-success"
+              >
+                <h4 style="font-weight: bold" class="card-title">
+                  Kirim qo'shish +
+                </h4>
+              </button> -->
           </div>
 
           <div class="card-body">
@@ -30,11 +30,11 @@
                       placeholder="Kategoriyasi bo'yicha"
                       name="category"
                     >
-                      <mat-option [value]="null" (click)="loadExpenses()"
+                      <mat-option [value]="null" (click)="loadIncomes()"
                         >None</mat-option
                       >
                       <mat-option
-                        *ngFor="let cat of expenseCats"
+                        *ngFor="let cat of incomeCats"
                         [value]="cat.id"
                         (click)="applyFilters(cat.id, '', '')"
                       >
@@ -67,7 +67,7 @@
                   </mat-form-field>
                 </div>
 
-                <div class="col-sm-3 col-lg-1">
+                <div class="col-sm-3 col-lg-2">
                   <mat-form-field>
                     <input
                       matInput
@@ -102,13 +102,12 @@
                 <div class="col-sm-2 col-lg-1">
                   <button
                     mat-raised-button
-                    (click)="getListOfExpensesWithDate()"
+                    (click)="getListOfIncomesWithDate()"
                     class="btn btn-success btn-round btn-block"
                   >
                     <span class="material-icons"> manage_search </span>
                   </button>
                 </div>
-                <!-- downlaodExcel -->
                 <div class="col-sm-2 col-lg-1">
                   <button
                     mat-raised-button
@@ -119,7 +118,8 @@
                   </button>
                 </div>
               </div>
-              <!-- Pagination -->
+
+              <!-- PAGINATION -->
               <div class="row">
                 <ul
                   class="pagination justify-content-center"
@@ -157,7 +157,7 @@
                 >
                   <thead>
                     <tr>
-                      <th class="text-center" mat-sort-header="id">
+                      <th class="text-right" mat-sort-header="id">
                         {{ tableData1.headerRow[0] }}
                       </th>
                       <th class="text-center" mat-sort-header="uzs_cash">
@@ -177,11 +177,16 @@
                       <th class="text-center">{{ tableData1.headerRow[7] }}</th>
                       <th class="text-center">{{ tableData1.headerRow[8] }}</th>
                       <th class="text-center">{{ tableData1.headerRow[9] }}</th>
+                      <th class="text-center">
+                        {{ tableData1.headerRow[10] }}
+                      </th>
+                      <th class="text-right">{{ tableData1.headerRow[11] }}</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
-                      *ngFor="let row of expenseList; let i = index"
+                      *ngFor="let row of incomesList; let i = index"
+                      [class.table-active]="row.id === selectedIncomeId"
                       class="text-center"
                     >
                       <td
@@ -204,28 +209,47 @@
                       <td>
                         {{ row.account | currency : " " : "symbol" : "1.0-0" }}
                       </td>
-                      <td>{{ row.comment }}</td>
                       <td>{{ row.admin_id ? row.admin_id : "" }}</td>
-
+                      <td>{{ row.userId ? row.userId : "" }}</td>
+                      <td>{{ row.part_num }}</td>
+                      <td>{{ row.comment }}</td>
                       <td>{{ row.category.name }}</td>
                       <td>{{ row.date | date : "dd.MM.yyyy HH:MM" }}</td>
-                      <td class="td-actions text-right">
-                        <button
-                          mat-raised-button
-                          type="button"
-                          class="btn btn-link btn-success btn-just-icon"
-                          (click)="editExpense(row)"
+
+                      <td class="text-end">
+                        <div
+                          class="btn-group"
+                          role="group"
+                          aria-label="Income actions"
                         >
-                          <i class="material-icons">edit</i>
-                        </button>
-                        <button
-                          mat-raised-button
-                          type="button"
-                          class="btn btn-link btn-danger btn-just-icon"
-                          (click)="delete(row.id)"
-                        >
-                          <i class="material-icons">delete</i>
-                        </button>
+                          <button
+                            mat-raised-button
+                            type="button"
+                            class="btn btn-link btn-success btn-just-icon"
+                            title="Muvaffaqiyatli"
+                            (click)="succCheck(row.id)"
+                          >
+                            <i class="material-icons">check_circle</i>
+                          </button>
+                          <button
+                            mat-raised-button
+                            type="button"
+                            class="btn btn-link btn-danger btn-just-icon"
+                            (click)="susCheck(row.id)"
+                            title="Shubxali"
+                          >
+                            <i class="material-icons">error_outline</i>
+                          </button>
+                          <!-- <button
+                            mat-raised-button
+                            type="button"
+                            class="btn btn-link btn-danger btn-just-icon"
+                            title="Muvaffaqiyatsiz kirimlar"
+                            (click)="failedCheck(row.id)"
+                          >
+                            <i class="material-icons">block</i>
+                          </button> -->
+                        </div>
                       </td>
                     </tr>
                   </tbody>
