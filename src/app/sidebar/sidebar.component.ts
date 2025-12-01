@@ -30,34 +30,36 @@ export const ownerROUTES: RouteInfo[] = [
     icontype: "dashboard",
   },
   {
-    path: "/uzm/incomes",
-    title: "Kirimlar",
-    type: "link",
-    icontype: "paid",
-  },
-  {
     path: "/uzm/expenses",
     title: "Chiqimlar",
     type: "link",
-    icontype: "paid",
+    icontype: "trending_down",
   },
+  {
+    path: "/uzm/incomes",
+    title: "Kirimlar",
+    type: "link",
+    icontype: "trending_up",
+  },
+
   {
     path: "/uzm/total-balance",
     title: "Umumiy Hisob jadvali",
     type: "link",
-    icontype: "paid",
+    icontype: "account_balance_wallet",
   },
   {
     path: "/uzm/user-expenses",
     title: "Mening Chiqimlarim",
     type: "link",
-    icontype: "paid",
+    icontype: "receipt_long",
   },
+
   {
     path: "/uzm/users",
     title: "Foydalanuvchilar",
     type: "link",
-    icontype: "people",
+    icontype: "group",
   },
   {
     path: "/uzm/settings",
@@ -75,17 +77,24 @@ export const managerROUTES: RouteInfo[] = [
     icontype: "dashboard",
   },
   {
-    path: "/uzm/incomes",
-    title: "Kirimlar",
-    type: "link",
-    icontype: "paid",
-  },
-  {
     path: "/uzm/expenses",
     title: "Chiqimlar",
     type: "link",
     icontype: "paid",
   },
+  {
+    path: "/uzm/daily_ov_income",
+    title: "Umumiy Kirim Jadvali",
+    type: "link",
+    icontype: "receipt_long",
+  },
+  {
+    path: "/uzm/incomes",
+    title: "Kirimlar",
+    type: "link",
+    icontype: "paid",
+  },
+
   {
     path: "/uzm/user-expenses",
     title: "Mening Chiqimlarim",

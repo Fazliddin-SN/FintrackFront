@@ -1,83 +1,60 @@
-<div class="main-content">
-  <div class="container-fluid">
-    <div class="row">
-      <div class="col-lg-6 col-md-12">
-        <div class="card">
-          <div class="card-header card-header-text card-header-warning">
-            <div class="card-text">
-              <h4 class="card-title">Kirim Kategoriyalari</h4>
-              <p class="card-category">
-                Bu yerda Kirim kategoriyalari saqlanadi!
-              </p>
-            </div>
-            <button
-              (click)="addIncome()"
-              class="card-text mat-button card-header-success"
-            >
-              <h4 style="font-weight: bold" class="card-title">
-                Kategoriya Qo'shish +
-              </h4>
-            </button>
-          </div>
-
-          <div class="card-body table-responsive">
-            <table
-              class="table table-striped table-no-bordered table-hover"
-              cellspacing="0"
-              width="100%"
-              style="width: 100%"
-            >
-              <thead class="text-warning">
-                <tr>
-                  <th>No</th>
-                  <th class="text-center">Kategority Nomi</th>
-
-                  <th class="text-center">Amallar</th>
-
-                  <!--  <th class="text-center">{{ dataTable.headerRow[5] }}</th>
-                                        <th class="text-center">{{ dataTable.headerRow[6] }}</th> -->
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  *ngFor="let row of incomeCats; let i = index"
-                  class="text-center"
-                  style="padding: 1px 2px"
-                >
-                  <td>{{ i + 1 }}</td>
-                  <td>{{ row.name }}</td>
-
-                  <!--  <td>...</td> -->
-                  <td>
-                    <button
-                      mat-raised-button
-                      type="button"
-                      class="btn btn-link btn-danger btn-just-icon visibility"
-                      (click)="updateCat(row.id, row.name)"
-                    >
-                      <i class="material-icons">edit</i>
-                    </button>
-                    <button
-                      mat-raised-button
-                      class="btn btn-link btn-danger btn-just-icon visibility"
-                      (click)="deleteInCat(row.id, row.name)"
-                    >
-                      <i class="material-icons">delete</i>
-                    </button>
-                    <!-- <button mat-raised-button class="btn btn-link btn-info btn-just-icon visibility" ><i class="material-icons" (click)="changePassword(row.id)">password</i></button>
-                                    <a href="javascript:void(0" class="btn btn-link btn-primary btn-just-icon edit"><i (click)="editClient(row.id,row.username,row.first_name,row.last_name)" class="material-icons">edit</i></a>  -->
-                    <!-- <a href="javascript:void(0s" class="btn btn-link btn-success btn-just-icon "><i (click)="receiveParcel(row.trackingNumber)"  class="material-icons">done_outline</i></a>
-                                  -->
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            <p style="color: red" *ngIf="errorMessage">
-              Xatolik: {{ errorMessage }}
-            </p>
-          </div>
-        </div>
+<div class="category-card">
+  <div class="card-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h4 class="card-title">
+          <i class="material-icons">account_balance_wallet</i>
+          Kirim Kategoriyalari
+        </h4>
+        <p class="card-subtitle">Kirim uchun kategoriyalar ro'yxati</p>
       </div>
+      <button mat-raised-button color="primary" (click)="addIncome()" class="add-category-btn">
+        <mat-icon>add</mat-icon>
+        Qo'shish
+      </button>
+    </div>
+  </div>
+
+  <div class="card-body">
+    <!-- Loading State -->
+    <div class="loading-state" *ngIf="!incomeCats || incomeCats.length === 0 && !errorMessage">
+      <mat-icon>inbox</mat-icon>
+      <p>Kategoriyalar mavjud emas</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-state" *ngIf="errorMessage">
+      <mat-icon color="warn">error_outline</mat-icon>
+      <p>{{ errorMessage }}</p>
+    </div>
+
+    <!-- Categories Table -->
+    <div class="table-wrapper" *ngIf="incomeCats && incomeCats.length > 0 && !errorMessage">
+      <table class="categories-table">
+        <thead>
+          <tr>
+            <th class="col-number">№</th>
+            <th class="col-name">Kategoriya Nomi</th>
+            <th class="col-actions">Amallar</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let row of incomeCats; let i = index">
+            <td class="col-number">{{ i + 1 }}</td>
+            <td class="col-name">
+              <span class="category-name">{{ row.name }}</span>
+            </td>
+            <td class="col-actions">
+              <button mat-icon-button color="primary" (click)="updateCat(row.id, row.name)" matTooltip="Tahrirlash">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteInCat(row.id, row.name)" matTooltip="O'chirish">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>

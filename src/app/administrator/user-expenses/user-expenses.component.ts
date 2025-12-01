@@ -1,13 +1,41 @@
 import { DatePipe } from "@angular/common";
-import { Component, inject, OnInit } from "@angular/core";
+import { Component, OnInit, OnDestroy } from "@angular/core";
 import { Sort } from "@angular/material/sort";
 import { ExpenseService } from "src/app/services/expense.service";
-
+import { CategoriesService } from "src/app/services/categories.service";
+import { Subject } from "rxjs";
+import { takeUntil } from "rxjs/operators";
 import * as XLSX from "xlsx";
 import * as FileSaver from "file-saver";
 
-declare interface TableData {
-  headerRow: string[];
+// Proper interface for Expense
+interface Expense {
+  id: number;
+  uzs_cash: number;
+  usd_cash: number;
+  card: number;
+  comment: string;
+  admin_id: number;
+  category_id: number;
+  date: string;
+  category?: {
+    id: number;
+    name: string;
+  };
+}
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface FilterState {
+  category_id: string;
+  comment: string;
+  startDate: string;
+  endDate: string;
+  sortField: string;
+  sortDirection: string;
 }
 
 @Component({
@@ -15,268 +43,358 @@ declare interface TableData {
   templateUrl: "./user-expenses.component.html",
   styleUrls: ["./user-expenses.component.css"],
 })
-export class UserExpensesComponent implements OnInit {
-  private expenseService = inject(ExpenseService);
+export class UserExpensesComponent implements OnInit, OnDestroy {
+  // Data properties
+  expenseList: Expense[] = [];
+  expenseCats: Category[] = [];
+  filteredExpenses: Expense[] = [];
 
-  expenseList: string[] = [];
-  errorMessage: string;
-  tableData1: TableData;
+  // UI state
+  isLoading: boolean = false;
+  showAdvancedFilters: boolean = false;
+  errorMessage: string = "";
 
-  danValue: string;
-  gachaValue: string;
-
-  // pagination
+  // Pagination
   currentPage: number = 0;
-  totalPages: number;
-  needPagination: boolean;
-  mypages = [];
-  isPagesActive: boolean;
-  staff_id: string;
+  totalPages: number = 0;
+  totalItems: number = 0;
+  pageSize: number = 100;
+  pages: number[] = [];
 
-  // STORING FILTERED INCOME DATA
-  filteredExpenses: any[];
+  // Filter state
+  filters: FilterState = {
+    category_id: "",
+    comment: "",
+    startDate: "",
+    endDate: "",
+    sortField: "",
+    sortDirection: "",
+  };
 
-  constructor(private datePipe: DatePipe) {
-    this.loadExpenses();
-  }
+  // Table headers
+  tableHeaders: string[] = [
+    "№",
+    "So'mda",
+    "Dollarda",
+    "Kartadan",
+    "Izoh",
+    "Kategoriya",
+    "Sana",
+  ];
+
+  // User info
+  roleId: string = "";
+
+  // For unsubscribing
+  private destroy$ = new Subject<void>();
+
+  constructor(
+    private datePipe: DatePipe,
+    private expenseService: ExpenseService,
+    private expenseCatService: CategoriesService
+  ) {}
 
   ngOnInit(): void {
-    this.tableData1 = {
-      headerRow: [
-        "№/Jami",
-        "So'mda",
-        "Dollarda",
-        "Kartadan",
-        "Izoh",
-        "Manager IDsi",
-        "Kategoriyasi",
-        "Sanasi",
-      ],
-    };
+    this.roleId = localStorage.getItem("roleId") || "";
+    this.loadInitialData();
+
+    if (this.roleId != "1") {
+      const el = document.querySelector(".toggle-filters-btn");
+      if (el) {
+        el.remove();
+      }
+      this.showAdvancedFilters = true;
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  // Load all initial data
+  loadInitialData(): void {
+    this.loadExpenseCats();
     this.loadExpenses();
-    this.staff_id = localStorage.getItem("userId");
   }
 
-  pagebyNum(ipage) {
-    this.currentPage = ipage;
-    this.isPagesActive = true;
-    document.getElementById("listcard").scrollIntoView();
-    this.loadExpenses();
+  // LOAD EXPENSE CATEGORIES
+  loadExpenseCats(): void {
+    this.expenseCatService
+      .getExCats()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.expenseCats = res;
+        },
+        error: (err) => {
+          console.error("Kategoriyalarni yuklashda xatolik:", err);
+        },
+      });
   }
 
-  fromFunction(date) {
-    this.danValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
+  // LOAD MY EXPENSES
+  loadExpenses(): void {
+    this.isLoading = true;
+    this.errorMessage = "";
+
+    this.expenseService
+      .getMyExpenses(this.currentPage)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.expenseList = res.expenses || [];
+          this.totalPages = res.totalPages || 0;
+
+          // Calculate totalItems if backend doesn't provide it
+          this.totalItems = res.totalItems || this.totalPages * this.pageSize;
+
+          this.updatePagination();
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.handleError("Ma'lumotlarni yuklashda xatolik", err);
+        },
+      });
   }
 
-  toFunction(date) {
-    this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
+  // LOAD EXPENSES WITH FILTERS
+  loadExpensesWithFilters(): void {
+    this.isLoading = true;
+    this.errorMessage = "";
+
+    const queryParams = this.buildQueryParams();
+
+    this.expenseService
+      .getMyExpensesWithFilter(this.currentPage, queryParams)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.expenseList = res.expenses || [];
+          this.filteredExpenses = res.expenses || [];
+          this.totalPages = res.totalPages || 0;
+
+          // Calculate totalItems if backend doesn't provide it
+          this.totalItems = res.totalItems || this.totalPages * this.pageSize;
+
+          this.updatePagination();
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.handleError("Filterlangan ma'lumotlarni yuklashda xatolik", err);
+        },
+      });
   }
 
-  sortComment: string = "";
-  sortField: string = "";
-  sortDirection: string = "";
+  // BUILD QUERY PARAMS
+  buildQueryParams(): string {
+    const params: string[] = [];
 
-  // Called when user sorts a column
-  sortData(sort: Sort) {
-    if (!sort.active || sort.direction === "") {
-      this.sortField = "";
-      this.sortDirection = "";
+    if (this.filters.category_id)
+      params.push(`category_id=${this.filters.category_id}`);
+    if (this.filters.comment) params.push(`comment=${this.filters.comment}`);
+    if (this.filters.startDate)
+      params.push(`startDate=${this.filters.startDate}`);
+    if (this.filters.endDate) params.push(`endDate=${this.filters.endDate}`);
+    if (this.filters.sortField) params.push(`sort=${this.filters.sortField}`);
+    if (this.filters.sortDirection)
+      params.push(`order=${this.filters.sortDirection}`);
+
+    return params.length > 0 ? `&${params.join("&")}` : "";
+  }
+
+  // UPDATE PAGINATION
+  updatePagination(): void {
+    this.pages = Array.from({ length: this.totalPages }, (_, i) => i);
+  }
+
+  // PAGINATION - GO TO PAGE
+  goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages) return;
+    this.currentPage = page;
+    this.scrollToTop();
+
+    if (this.hasActiveFilters()) {
+      this.loadExpensesWithFilters();
     } else {
-      this.sortField = sort.active;
-      this.sortDirection = sort.direction;
+      this.loadExpenses();
     }
+  }
 
-    if (this.danValue || this.gachaValue) {
-      return this.getListOfExpensesWithDate();
+  // HANDLE PAGINATION CHANGE (Material Paginator)
+  onPageChange(event: any): void {
+    this.currentPage = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.scrollToTop();
+
+    if (this.hasActiveFilters()) {
+      this.loadExpensesWithFilters();
+    } else {
+      this.loadExpenses();
     }
+  }
 
-    // Reuse existing filter + sort values
-    this.getListOfExpensesWIthFilter(
-      this.sortComment,
-      this.danValue,
-      this.gachaValue,
-      this.sortField,
-      this.sortDirection
+  // CHECK IF FILTERS ARE ACTIVE
+  hasActiveFilters(): boolean {
+    return (
+      !!this.filters.category_id ||
+      !!this.filters.comment ||
+      !!this.filters.startDate ||
+      !!this.filters.endDate
     );
   }
 
-  // Called when user applies a filter (e.g. selects category, comment, staff)
-  applyFilters(comment: string) {
-    this.sortComment = comment;
+  // APPLY FILTERS
+  applyFilter(filterType: string, value: any): void {
+    this.currentPage = 0; // Reset to first page
 
-    // Reuse last sort field + direction
+    switch (filterType) {
+      case "category":
+        this.filters.category_id = value;
+        break;
+      case "comment":
+        this.filters.comment = value;
+        break;
+      case "startDate":
+        this.filters.startDate = this.formatDate(value);
+        break;
+      case "endDate":
+        this.filters.endDate = this.formatDate(value);
+        break;
+    }
 
-    // Reuse last sort field + direction
-    this.getListOfExpensesWIthFilter(
-      comment,
-      this.danValue,
-      this.gachaValue,
-      this.sortField,
-      this.sortDirection
-    );
+    if (this.hasActiveFilters()) {
+      this.loadExpensesWithFilters();
+    } else {
+      this.loadExpenses();
+    }
   }
 
-  // LOADING EXPENSES WITHOUT FILTER
-  loadExpenses() {
-    this.expenseService.getMyExpenses(this.currentPage).subscribe({
-      next: (res) => {
-        this.expenseList = res.expenses;
-        console.log("expense list ", this.expenseList);
-
-        this.currentPage = res.currentPage;
-        this.totalPages = res.totalPages;
-        if (this.totalPages > 1) {
-          this.needPagination = true;
-          for (let i = 0; i < this.totalPages; i++) {
-            this.mypages[i] = { id: "name" };
-          }
-        }
-      },
-      error: (err) => {
-        this.errorMessage = err.error.error;
-      },
-    });
+  // CLEAR ALL FILTERS
+  clearFilters(): void {
+    this.filters = {
+      category_id: "",
+      comment: "",
+      startDate: "",
+      endDate: "",
+      sortField: "",
+      sortDirection: "",
+    };
+    this.currentPage = 0;
+    this.loadExpenses();
   }
 
-  // LOADING EXPENSES WITH DATE FILTER
-  getListOfExpensesWithDate() {
-    const filterLink =
-      `&startDate=` +
-      this.danValue +
-      `&endDate=` +
-      this.gachaValue +
-      `&comment=` +
-      this.sortComment +
-      `&sort=` +
-      this.sortField +
-      `&order=` +
-      this.sortDirection;
+  // SORTING
+  sortData(sort: Sort): void {
+    if (!sort.active || sort.direction === "") {
+      this.filters.sortField = "";
+      this.filters.sortDirection = "";
+    } else {
+      this.filters.sortField = sort.active;
+      this.filters.sortDirection = sort.direction;
+    }
 
-    return this.expenseService
-      .getMyExpensesWithFilter(this.currentPage, filterLink)
-      .subscribe({
-        next: (res) => {
-          this.expenseList = res.expenses;
-          this.filteredExpenses = res.expenses;
-          this.currentPage = res.currentPage;
-          this.totalPages = res.totalPages;
-          if (this.totalPages > 1) {
-            this.needPagination = true;
-            for (let i = 0; i < this.totalPages; i++) {
-              this.mypages[i] = { id: "name" };
-            }
-          }
-        },
-        error: (err) => {
-          this.errorMessage = err.error.error;
-        },
-      });
+    if (this.hasActiveFilters()) {
+      this.loadExpensesWithFilters();
+    } else {
+      this.loadExpenses();
+    }
   }
 
-  // LOAD EXPENSES WITH FILTER OF CATS, COMMENT AND ADMIN ID
-  getListOfExpensesWIthFilter(
-    comment: string,
-    startDate: string,
-    endDate: string,
-    sortField: string,
-    sortDirection: string
-  ) {
-    const filterLink =
-      `&comment=` +
-      comment +
-      `&startDate=` +
-      startDate +
-      `&endDate=` +
-      endDate +
-      `&sort=` +
-      sortField +
-      `&order=` +
-      sortDirection;
-
-    return this.expenseService
-      .getMyExpensesWithFilter(this.currentPage, filterLink)
-      .subscribe({
-        next: (res) => {
-          this.expenseList = res.expenses;
-          this.filteredExpenses = res.expenses;
-
-          this.currentPage = res.currentPage;
-          this.totalPages = res.totalPages;
-          if (this.totalPages > 1) {
-            this.needPagination = true;
-            for (let i = 0; i < this.totalPages; i++) {
-              this.mypages[i] = { id: "name" };
-            }
-          }
-        },
-        error: (err) => {
-          this.errorMessage = err.error.error;
-        },
-      });
+  // TOGGLE ADVANCED FILTERS
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
   }
 
-  // UPLOADING FILTERED INCOME DATA IN EXEL FILE
-  exportToExel(data: any[], fileName: string): void {
-    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
-    // Set column widths manually
+  // EXPORT TO EXCEL
+  exportToExcel(): void {
+    const dataToExport = this.filteredExpenses.length
+      ? this.filteredExpenses
+      : this.expenseList;
+
+    if (!dataToExport.length) {
+      alert("Export qilish uchun ma'lumot yo'q!");
+      return;
+    }
+
+    const formattedData = dataToExport.map((exp, index) => ({
+      "№": index + 1,
+      "So'mda": this.formatCurrency(exp.uzs_cash),
+      Dollarda: this.formatCurrency(exp.usd_cash),
+      Kartadan: this.formatCurrency(exp.card),
+      Izoh: exp.comment || "",
+      Kategoriya: exp.category?.name || "",
+      Sana: this.formatDateForExcel(exp.date),
+    }));
+
+    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(formattedData);
     worksheet["!cols"] = [
-      { wch: 10 }, // Soʻmda
-      { wch: 10 }, // Dollar
-      { wch: 10 }, // Karta
-      { wch: 10 }, // Admin ID
-      { wch: 20 }, // Kategoriya
+      { wch: 5 }, // №
+      { wch: 15 }, // So'mda
+      { wch: 15 }, // Dollarda
+      { wch: 15 }, // Kartadan
       { wch: 30 }, // Izoh
-      { wch: 15 }, // Sana
+      { wch: 20 }, // Kategoriya
+      { wch: 12 }, // Sana
     ];
 
     const workbook: XLSX.WorkBook = {
-      Sheets: { data: worksheet },
-      SheetNames: ["data"],
+      Sheets: { "Mening Chiqimlarim": worksheet },
+      SheetNames: ["Mening Chiqimlarim"],
     };
 
-    const exelBuffer: any = XLSX.write(workbook, {
+    const excelBuffer: any = XLSX.write(workbook, {
       bookType: "xlsx",
       type: "array",
     });
 
-    const blob: Blob = new Blob([exelBuffer], {
-      type: "application/octet-stream",
+    const blob: Blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
-    const timestamp = new Date().toISOString().slice(0, 10);
-    const fullName = `${fileName}_${timestamp}.xlsx`;
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fullName;
-    link.click();
-
-    FileSaver.saveAs(blob, `${fullName}.xlsx`);
+    const timestamp = this.datePipe.transform(new Date(), "yyyy-MM-dd");
+    FileSaver.saveAs(blob, `Mening_Chiqimlarim_${timestamp}.xlsx`);
   }
-  // format date
-  fmd(date: any) {
-    return this.datePipe.transform(date, "d MMMM, y"); // Example: "31 may, 2025"
-  }
-  // formate currency
-  formatCurrency = (val: any) => {
-    return val ? val.toLocaleString("uz-UZ") : "";
-  };
 
-  // DOWNLOAD EXEL
-  downlaodExcel() {
-    if (this.filteredExpenses.length) {
-      const filteredData = this.filteredExpenses.map((exp) => ({
-        Somda: this.formatCurrency(+exp.uzs_cash) || 0,
-        Dollarda: this.formatCurrency(+exp.usd_cash) || 0,
-        Kartadan: this.formatCurrency(+exp.card) || 0,
-        "Admin ID": exp.admin_id,
-        Kategoriyasi: exp.category.name,
-        Izoh: exp.comment,
-        Sanasi: this.fmd(exp.date),
-      }));
-      this.exportToExel(filteredData, "Harajatlarim");
-      return;
+  // HELPER: FORMAT DATE
+  formatDate(date: any): string {
+    if (!date) return "";
+    return this.datePipe.transform(date, "yyyy-MM-dd") || "";
+  }
+
+  // HELPER: FORMAT DATE FOR EXCEL
+  formatDateForExcel(date: any): string {
+    if (!date) return "";
+    return this.datePipe.transform(date, "d MMMM, y") || "";
+  }
+
+  // HELPER: FORMAT CURRENCY
+  formatCurrency(value: number): string {
+    if (!value) return "0";
+    return value.toLocaleString("uz-UZ");
+  }
+
+  // HELPER: HANDLE ERRORS
+  handleError(title: string, err: any): void {
+    console.error(title, err);
+    this.errorMessage = err.error?.error || err.message || "Noma'lum xatolik";
+  }
+
+  // HELPER: SCROLL TO TOP
+  scrollToTop(): void {
+    const element = document.getElementById("listcard");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    alert("No data");
+  }
+
+  // HELPER: GET TOTAL AMOUNT
+  getTotalAmount(field: keyof Expense): number {
+    return this.expenseList.reduce(
+      (sum, expense) => sum + (Number(expense[field]) || 0),
+      0
+    );
   }
 }

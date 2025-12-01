@@ -1,0 +1,261 @@
+<div class="main-content">
+    <div class="container-fluid">
+
+        <!-- Page Header -->
+        <div class="page-header">
+            <h3 class="page-title">
+                <i class="material-icons">summarize</i>
+                Kunlik Umumiy Kirimlar
+            </h3>
+            <button mat-raised-button color="primary" (click)="addDailyIncome()" class="add-btn">
+                <i class="material-icons">add</i>
+                Bugungi Kirim
+            </button>
+        </div>
+
+        <!-- Today's Entry Banner -->
+        <div class="today-banner" *ngIf="todayEntry">
+            <div class="banner-content">
+                <div class="banner-left">
+                    <i class="material-icons">info</i>
+                    <span class="banner-text">Bugun uchun yozuv mavjud</span>
+                </div>
+                <div class="banner-status">
+                    <i class="material-icons">{{ todayEntry.canBeEdited ? 'edit' : 'lock' }}</i>
+                    {{ todayEntry.canBeEdited ? 'Tahrirlanishi mumkin' : 'Bloklangan' }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Card -->
+        <div class="content-card">
+
+            <!-- Filters Section -->
+            <div class="filters-section">
+                <div class="filters-row">
+
+                    <!-- Search Input -->
+                    <mat-form-field appearance="outline" class="filter-input">
+                        <mat-label>Qidirish</mat-label>
+                        <input matInput type="text" placeholder="Izoh bo'yicha qidirish..." [value]="filters.comment"
+                            (input)="applyFilter('comment', $event.target.value)" />
+                        <mat-icon matPrefix>search</mat-icon>
+                    </mat-form-field>
+
+                    <!-- Toggle Advanced Filters -->
+                    <button mat-stroked-button (click)="toggleAdvancedFilters()" class="filter-btn">
+                        <mat-icon>{{ showAdvancedFilters ? 'expand_less' : 'tune' }}</mat-icon>
+                        Filtrlar
+                    </button>
+
+                    <!-- Clear Filters -->
+                    <button mat-stroked-button color="warn" (click)="clearFilters()" *ngIf="hasActiveFilters()"
+                        class="filter-btn">
+                        <mat-icon>clear</mat-icon>
+                        Tozalash
+                    </button>
+                </div>
+
+                <!-- Advanced Filters -->
+                <div class="filters-row advanced-filters-row" *ngIf="showAdvancedFilters">
+
+                    <!-- Start Date -->
+                    <mat-form-field appearance="outline" class="filter-input">
+                        <mat-label>Boshlanish sanasi</mat-label>
+                        <input matInput [matDatepicker]="startPicker" [value]="filters.startDate"
+                            (dateChange)="applyFilter('startDate', $event.value)" />
+                        <mat-datepicker-toggle matSuffix [for]="startPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #startPicker></mat-datepicker>
+                    </mat-form-field>
+
+                    <!-- End Date -->
+                    <mat-form-field appearance="outline" class="filter-input">
+                        <mat-label>Tugash sanasi</mat-label>
+                        <input matInput [matDatepicker]="endPicker" [value]="filters.endDate"
+                            (dateChange)="applyFilter('endDate', $event.value)" />
+                        <mat-datepicker-toggle matSuffix [for]="endPicker"></mat-datepicker-toggle>
+                        <mat-datepicker #endPicker></mat-datepicker>
+                    </mat-form-field>
+                </div>
+            </div>
+
+            <!-- Content Body -->
+            <div class="content-body">
+
+                <!-- Loading State -->
+                <div class="state-container loading-container" *ngIf="isLoading">
+                    <mat-spinner diameter="60"></mat-spinner>
+                    <p class="state-text">Yuklanmoqda...</p>
+                </div>
+
+                <!-- Error State -->
+                <div class="state-container error-container" *ngIf="errorMessage && !isLoading">
+                    <mat-icon class="state-icon">error_outline</mat-icon>
+                    <h3 class="state-title">Xatolik yuz berdi</h3>
+                    <p class="state-text">{{ errorMessage }}</p>
+                    <button mat-raised-button color="primary" (click)="loadDailyIncomes()">
+                        <mat-icon>refresh</mat-icon>
+                        Qayta urinish
+                    </button>
+                </div>
+
+                <!-- Empty State -->
+                <div class="state-container empty-container"
+                    *ngIf="!isLoading && !errorMessage && dailyIncomeList.length === 0">
+                    <mat-icon class="state-icon">inbox</mat-icon>
+                    <h3 class="state-title">Ma'lumot topilmadi</h3>
+                    <p class="state-text" *ngIf="hasActiveFilters()">
+                        Filtrlarni o'zgartiring yoki tozalang
+                    </p>
+                    <p class="state-text" *ngIf="!hasActiveFilters()">
+                        Birinchi kunlik umumiy kirimni qo'shing
+                    </p>
+                    <button mat-raised-button color="primary" (click)="addDailyIncome()" *ngIf="!hasActiveFilters()">
+                        <mat-icon>add</mat-icon>
+                        Kirim Qo'shish
+                    </button>
+                </div>
+
+                <!-- Data Table -->
+                <div class="table-wrapper" *ngIf="!isLoading && !errorMessage && dailyIncomeList.length > 0">
+                    <table mat-table [dataSource]="dailyIncomeList" matSort (matSortChange)="sortData($event)"
+                        class="data-table">
+
+                        <!-- Index Column -->
+                        <ng-container matColumnDef="index">
+                            <th mat-header-cell *matHeaderCellDef class="cell-index">№</th>
+                            <td mat-cell *matCellDef="let row; let i = index" class="cell-index">
+                                {{ (currentPage * pageSize) + i + 1 }}
+                            </td>
+                        </ng-container>
+
+                        <!-- Date Column -->
+                        <ng-container matColumnDef="date">
+                            <th mat-header-cell *matHeaderCellDef mat-sort-header>Sana</th>
+                            <td mat-cell *matCellDef="let row" class="cell-date">
+                                {{ row.createdAt | date:'dd.MM.yyyy' }}
+                            </td>
+                        </ng-container>
+
+                        <!-- UZS Cash Column -->
+                        <ng-container matColumnDef="uzs_cash">
+                            <th mat-header-cell *matHeaderCellDef mat-sort-header>So'mda</th>
+                            <td mat-cell *matCellDef="let row">
+                                <span class="cell-amount" *ngIf="row.uzs_cash && row.uzs_cash > 0">
+                                    {{ row.uzs_cash | number:'1.0-0' }}
+                                    <span class="currency-label">so'm</span>
+                                </span>
+                                <span class="cell-empty" *ngIf="!row.uzs_cash || row.uzs_cash == 0">—</span>
+                            </td>
+                        </ng-container>
+
+                        <!-- USD Cash Column -->
+                        <ng-container matColumnDef="usd_cash">
+                            <th mat-header-cell *matHeaderCellDef mat-sort-header>Dollarda</th>
+                            <td mat-cell *matCellDef="let row">
+                                <span class="cell-amount" *ngIf="row.usd_cash && row.usd_cash > 0">
+                                    ${{ row.usd_cash | number:'1.0-0' }}
+                                </span>
+                                <span class="cell-empty" *ngIf="!row.usd_cash || row.usd_cash == 0">—</span>
+                            </td>
+                        </ng-container>
+
+                        <!-- Card Column -->
+                        <ng-container matColumnDef="card">
+                            <th mat-header-cell *matHeaderCellDef mat-sort-header>Kartadan</th>
+                            <td mat-cell *matCellDef="let row">
+                                <span class="cell-amount" *ngIf="row.card && row.card > 0">
+                                    {{ row.card | number:'1.0-0' }}
+                                    <span class="currency-label">so'm</span>
+                                </span>
+                                <span class="cell-empty" *ngIf="!row.card || row.card == 0">—</span>
+                            </td>
+                        </ng-container>
+
+                        <!-- Account Column -->
+                        <ng-container matColumnDef="account">
+                            <th mat-header-cell *matHeaderCellDef mat-sort-header>Hisobdan</th>
+                            <td mat-cell *matCellDef="let row">
+                                <span class="cell-amount" *ngIf="row.account && row.account > 0">
+                                    {{ row.account | number:'1.0-0' }}
+                                    <span class="currency-label">so'm</span>
+                                </span>
+                                <span class="cell-empty" *ngIf="!row.account || row.account == 0">—</span>
+                            </td>
+                        </ng-container>
+
+                        <!-- Manager Column -->
+                        <ng-container matColumnDef="manager">
+                            <th mat-header-cell *matHeaderCellDef>Menejer</th>
+                            <td mat-cell *matCellDef="let row">
+                                <span class="cell-manager" *ngIf="row.manager">
+                                    <mat-icon>person</mat-icon>
+                                    {{ row.manager.name }}
+                                </span>
+                                <span class="cell-empty" *ngIf="!row.manager">—</span>
+                            </td>
+                        </ng-container>
+
+                        <!-- Comment Column -->
+                        <ng-container matColumnDef="comment">
+                            <th mat-header-cell *matHeaderCellDef>Izoh</th>
+                            <td mat-cell *matCellDef="let row">
+                                <span class="cell-comment" [title]="row.comment">
+                                    {{ row.comment || '—' }}
+                                </span>
+                            </td>
+                        </ng-container>
+
+                        <!-- Status Column -->
+                        <ng-container matColumnDef="status">
+                            <th mat-header-cell *matHeaderCellDef>Holat</th>
+                            <td mat-cell *matCellDef="let row">
+                                <span class="cell-status editable" *ngIf="row.canBeEdited">
+                                    <mat-icon>edit</mat-icon>
+                                    Ochiq
+                                </span>
+                                <span class="cell-status locked" *ngIf="!row.canBeEdited">
+                                    <mat-icon>lock</mat-icon>
+                                    Yopiq
+                                </span>
+                            </td>
+                        </ng-container>
+
+                        <!-- Actions Column -->
+                        <ng-container matColumnDef="actions">
+                            <th mat-header-cell *matHeaderCellDef class="cell-actions">Amallar</th>
+                            <td mat-cell *matCellDef="let row" class="cell-actions">
+                                <button mat-icon-button color="primary" (click)="editDailyIncome(row)"
+                                    [disabled]="!row.canBeEdited" matTooltip="Tahrirlash" class="action-btn">
+                                    <mat-icon>edit</mat-icon>
+                                </button>
+                                <button mat-icon-button color="warn" (click)="deleteDailyIncome(row)"
+                                    [disabled]="!row.canBeEdited" matTooltip="O'chirish" class="action-btn">
+                                    <mat-icon>delete</mat-icon>
+                                </button>
+                            </td>
+                        </ng-container>
+
+                        <!-- Table Rows -->
+                        <tr mat-header-row
+                            *matHeaderRowDef="['index', 'date', 'uzs_cash', 'usd_cash', 'card', 'account', 'manager', 'comment', 'status', 'actions']">
+                        </tr>
+                        <tr mat-row
+                            *matRowDef="let row; columns: ['index', 'date', 'uzs_cash', 'usd_cash', 'card', 'account', 'manager', 'comment', 'status', 'actions']">
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination-section" *ngIf="!isLoading && totalPages > 1">
+                    <div class="pagination-info">
+                        Jami: <strong>{{ totalItems }}</strong> ta yozuv
+                    </div>
+                    <mat-paginator [length]="totalItems" [pageSize]="pageSize" [pageIndex]="currentPage"
+                        [hidePageSize]="true" (page)="goToPage($event.pageIndex)">
+                    </mat-paginator>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

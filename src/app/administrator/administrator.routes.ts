@@ -16,6 +16,7 @@ import { SuspiciousIncomesComponent } from "./auditor/suspicious-incomes/suspici
 import { FailedIncomesComponent } from "./auditor/failed-incomes/failed-incomes.component";
 import { SettingsComponent } from "./settings/settings.component";
 import { BalanceControlComponent } from "./balance-control/balance-control.component";
+import { DailyIncomeOverallComponent } from "./daily-income-overall/daily-income-overall.component";
 
 export const administratorRoutes: Routes = [
   {
@@ -58,6 +59,14 @@ export const administratorRoutes: Routes = [
         component: BalanceControlComponent,
         data: {
           title: "Umumiy Hisob Jadvali",
+        },
+      },
+      {
+        path: "daily_ov_income",
+        canActivate: [ManagerAuthGuardService],
+        component: DailyIncomeOverallComponent,
+        data: {
+          title: "Umumiy Kirimlar",
         },
       },
       {

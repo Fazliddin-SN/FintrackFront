@@ -11,26 +11,15 @@ export class IncomesService {
   constructor(private http: HttpClient, private config: GlobalEnvService) {
     this.baseUrl = config.baseUrl;
   }
-  // providing token in headers
-
-  token: string | null = localStorage.getItem("token");
-  headers = new HttpHeaders({
-    Authorization: `Bearer ${this.token}`,
-  });
 
   addIncome(body: any): Observable<any> {
-    return this.http.post<any>(
-      `${this.baseUrl}/income`,
-      { ...body },
-      { headers: this.headers }
-    );
+    return this.http.post<any>(`${this.baseUrl}/income`, { ...body });
   }
 
   // all incomes
   getIncomes(currentPage: any): Observable<any> {
     return this.http.get(
-      `${this.baseUrl}/income?page=` + currentPage + "&size=50",
-      { headers: this.headers }
+      `${this.baseUrl}/income?page=` + currentPage + "&size=100"
     );
   }
 
@@ -40,26 +29,19 @@ export class IncomesService {
     filterLink: string
   ): Observable<any> {
     return this.http.get<any>(
-      `${this.baseUrl}/income?page=` + currentPage + "&size=50" + filterLink,
-      { headers: this.headers }
+      `${this.baseUrl}/income?page=` + currentPage + "&size=100" + filterLink
     );
   }
 
   // update income
-  updateIncome(id: string, body: any): Observable<any> {
-    return this.http.put<any>(
-      `${this.baseUrl}/income/${id}`,
-      {
-        ...body,
-      },
-      { headers: this.headers }
-    );
+  updateIncome(id: number, body: any): Observable<any> {
+    return this.http.put<any>(`${this.baseUrl}/income/${id}`, {
+      ...body,
+    });
   }
   //delete
   delete(id: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/income/${id}`, {
-      headers: this.headers,
-    });
+    return this.http.delete(`${this.baseUrl}/income/${id}`);
   }
 
   // CHEKC INCOME REALIBILITY
@@ -68,7 +50,6 @@ export class IncomesService {
       `${this.baseUrl}/income/status/${id}`,
       {},
       {
-        headers: this.headers,
         params: new HttpParams().set("checkedStatus", status),
       }
     );

@@ -16,12 +16,13 @@ import { UsersComponent } from "./users/users.component";
 import { IncomesComponent } from "./incomes/incomes.component";
 import { ExpensesComponent } from "./expenses/expenses.component";
 import { UserExpensesComponent } from "./user-expenses/user-expenses.component";
-import { AllIncomesComponent } from './auditor/all-incomes/all-incomes.component';
-import { SuspiciousIncomesComponent } from './auditor/suspicious-incomes/suspicious-incomes.component';
-import { FailedIncomesComponent } from './auditor/failed-incomes/failed-incomes.component';
-import { NewIncomesComponent } from './auditor/new-incomes/new-incomes.component';
-import { SettingsComponent } from './settings/settings.component';
-import { BalanceControlComponent } from './balance-control/balance-control.component';
+import { AllIncomesComponent } from "./auditor/all-incomes/all-incomes.component";
+import { SuspiciousIncomesComponent } from "./auditor/suspicious-incomes/suspicious-incomes.component";
+import { FailedIncomesComponent } from "./auditor/failed-incomes/failed-incomes.component";
+import { NewIncomesComponent } from "./auditor/new-incomes/new-incomes.component";
+import { SettingsComponent } from "./settings/settings.component";
+import { BalanceControlComponent } from "./balance-control/balance-control.component";
+import { DailyIncomeOverallComponent } from './daily-income-overall/daily-income-overall.component';
 
 @NgModule({
   declarations: [
@@ -37,6 +38,7 @@ import { BalanceControlComponent } from './balance-control/balance-control.compo
     NewIncomesComponent,
     SettingsComponent,
     BalanceControlComponent,
+    DailyIncomeOverallComponent,
   ],
   imports: [
     CommonModule,

@@ -1,350 +1,367 @@
-import { Component, inject, OnInit } from "@angular/core";
+import { DatePipe } from "@angular/common";
+import { Component, OnInit, OnDestroy } from "@angular/core";
+import { Sort } from "@angular/material/sort";
 import { CategoriesService } from "src/app/services/categories.service";
 import { IncomesService } from "src/app/services/incomes.service";
+import { Subject } from "rxjs";
+import { takeUntil } from "rxjs/operators";
 import Swal from "sweetalert2";
-import * as $ from "jquery";
-import { DatePipe } from "@angular/common";
-import { Sort } from "@angular/material/sort";
-
 import * as XLSX from "xlsx";
 import * as FileSaver from "file-saver";
 
-declare interface TableData {
-  headerRow: string[];
+// Proper interface for Income
+interface Income {
+  id: number;
+  uzs_cash: number;
+  usd_cash: number;
+  card: number;
+  account: number;
+  comment: string;
+  admin_id: number;
+  userId: number;
+  part_num: string;
+  category_id: number;
+  date: string;
+  category?: {
+    id: number;
+    name: string;
+  };
 }
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface FilterState {
+  category_id: string;
+  comment: string;
+  staff_id: string;
+  startDate: string;
+  endDate: string;
+  sortField: string;
+  sortDirection: string;
+}
+
 @Component({
   selector: "app-incomes",
   templateUrl: "./incomes.component.html",
   styleUrls: ["./incomes.component.css"],
 })
-export class IncomesComponent implements OnInit {
-  private incomeService = inject(IncomesService);
-  private incomeCatService = inject(CategoriesService);
+export class IncomesComponent implements OnInit, OnDestroy {
+  // Data properties
+  incomesList: Income[] = [];
+  incomeCats: Category[] = [];
+  filteredIncomes: Income[] = [];
 
-  incomesList: string[] = [];
-  incomeCats: any[] = [];
-  errorMessage: string;
-  tableData1: TableData;
+  // UI state
+  isLoading: boolean = false;
+  showAdvancedFilters: boolean = false;
+  errorMessage: string = "";
 
-  danValue: string;
-  gachaValue: string;
-
-  // pagination
+  // Pagination
   currentPage: number = 0;
-  totalPages: number;
-  needPagination: boolean;
-  mypages = [];
-  isPagesActive: boolean;
-  staff_id: string;
+  totalPages: number = 0;
+  totalItems: number = 0;
+  pageSize: number = 100;
+  pages: number[] = [];
 
-  // STORING FILTERED INCOME DATA
-  filteredIncomes = [];
-
-  constructor(private datePipe: DatePipe) {
-    this.loadIncomes();
-    this.loadIncomeCats();
-  }
-  ngOnInit(): void {
-    //pagination
-    this.currentPage = 0;
-    this.needPagination = false;
-    this.isPagesActive = false;
-
-    this.tableData1 = {
-      headerRow: [
-        "№/Jami",
-        "So'mda",
-        "Dollarda",
-        "Kartadan",
-        "Kompaniya hisobiga",
-        "Izoh",
-        "Admin IDsi",
-        "Mijoz IDsi",
-        "Partiya Raqami",
-        "Kategoriyasi",
-        "Sanasi",
-        "Amallar",
-      ],
-    };
-    this.staff_id = localStorage.getItem("userId");
-    this.loadIncomes();
-    this.loadIncomeCats();
-  }
-
-  pagebyNum(ipage) {
-    this.currentPage = ipage;
-    this.isPagesActive = true;
-    document.getElementById("listcard").scrollIntoView();
-    this.loadIncomes();
-  }
-  // TRANSFORMING DATE VALUES
-  fromFunction(date) {
-    this.danValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
-  }
-  toFunction(date) {
-    this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
-  }
-
-  // Component-level filter and sort state
-  sortCategory_id: string = "";
-  sortComment: string = "";
-  sortStaff_id: string = "";
-  sortField: string = "";
-  sortDirection: string = "";
-
-  // Called when user sorts a column
-  sortData(sort: Sort) {
-    if (!sort.active || sort.direction === "") {
-      this.sortField = "";
-      this.sortDirection = "";
-    } else {
-      this.sortField = sort.active;
-      this.sortDirection = sort.direction;
-    }
-
-    if (this.danValue || this.gachaValue) {
-      return this.getListOfIncomesWithDate();
-    }
-    // Reuse existing filter + sort values
-    this.getListOfIncomesWIthFilter(
-      this.sortCategory_id,
-      this.sortComment,
-      this.sortStaff_id,
-      this.danValue,
-      this.gachaValue,
-      this.sortField,
-      this.sortDirection
-    );
-    this.getListOfIncomesWithDate();
-  }
-
-  // Called when user applies a filter (e.g. selects category, comment, staff)
-  applyFilters(category_id: string, comment: string, staff_id: string) {
-    this.sortCategory_id = category_id;
-    this.sortComment = comment;
-    this.sortStaff_id = staff_id;
-
-    // Reuse last sort field + direction
-
-    // Reuse last sort field + direction
-    this.getListOfIncomesWIthFilter(
-      category_id,
-      comment,
-      staff_id,
-      this.danValue,
-      this.gachaValue,
-      this.sortField,
-      this.sortDirection
-    );
-  }
-
-  // LOAD  INCOME CATS
-  loadIncomeCats() {
-    return this.incomeCatService.getInCats().subscribe({
-      next: (res) => {
-        this.incomeCats = res;
-      },
-      error: (err) => {
-        this.errorMessage = err.error.error;
-      },
-    });
-  }
-
-  // LOADING INCOMES WITHOUT FILTER
-  loadIncomes() {
-    this.incomeService.getIncomes(this.currentPage).subscribe({
-      next: (res) => {
-        this.incomesList = res.incomes;
-        this.filteredIncomes = [];
-        // console.log("incomes ", this.incomesList);
-        this.currentPage = res.currentPage;
-        this.totalPages = res.totalPages;
-        if (this.totalPages > 1) {
-          this.needPagination = true;
-          for (let i = 0; i < this.totalPages; i++) {
-            this.mypages[i] = { id: "name" };
-          }
-        }
-      },
-      error: (err) => {
-        this.errorMessage = err.error.error;
-      },
-    });
-  }
-  // LOADING INCOMES WITH DATE FILTER
-  getListOfIncomesWithDate() {
-    const filterLink =
-      `&startDate=` +
-      this.danValue +
-      `&endDate=` +
-      this.gachaValue +
-      `&category_id=` +
-      this.sortCategory_id +
-      `&comment=` +
-      this.sortComment +
-      `&staff_id=` +
-      this.sortStaff_id +
-      `&sort=` +
-      this.sortField +
-      `&order=` +
-      this.sortDirection;
-
-    return this.incomeService
-      .getIncomesWithFilter(this.currentPage, filterLink)
-      .subscribe({
-        next: (res) => {
-          this.incomesList = res.incomes;
-          this.filteredIncomes = res.incomes;
-          this.currentPage = res.currentPage;
-          this.totalPages = res.totalPages;
-          if (this.totalPages > 1) {
-            this.needPagination = true;
-            for (let i = 0; i < this.totalPages; i++) {
-              this.mypages[i] = { id: "name" };
-            }
-          }
-        },
-        error: (err) => {
-          this.errorMessage = err.error.error;
-        },
-      });
-  }
-  // LOAD INCOMES WITH FILTER OF CATS, COMMENT AND ADMIN ID
-  getListOfIncomesWIthFilter(
-    category_id: string,
-    comment: string,
-    staff_id: string,
-    startDate: string,
-    endDate: string,
-    sortField: string,
-    sortDirection: string
-  ) {
-    const filterLink =
-      `&category_id=` +
-      category_id +
-      `&comment=` +
-      comment +
-      `&staff_id=` +
-      staff_id +
-      `&startDate=` +
-      startDate +
-      `&endDate=` +
-      endDate +
-      `&sort=` +
-      sortField +
-      `&order=` +
-      sortDirection;
-
-    return this.incomeService
-      .getIncomesWithFilter(this.currentPage, filterLink)
-      .subscribe({
-        next: (res) => {
-          this.incomesList = res.incomes;
-          this.filteredIncomes = res.incomes;
-          this.currentPage = res.currentPage;
-          this.totalPages = res.totalPages;
-          if (this.totalPages > 1) {
-            this.needPagination = true;
-            for (let i = 0; i < this.totalPages; i++) {
-              this.mypages[i] = { id: "name" };
-            }
-          }
-        },
-        error: (err) => {
-          this.errorMessage = err.error.error;
-        },
-      });
-  }
-
-  // UPLOADING FILTERED INCOME DATA IN EXEL FILE
-  exportToExel(data: any[], fileName: string): void {
-    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
-    // Set column widths manually
-    worksheet["!cols"] = [
-      { wch: 10 }, // Soʻmda
-      { wch: 10 }, // Dollar
-      { wch: 10 }, // Karta
-      { wch: 20 }, // Hisobdan
-      { wch: 10 }, // user ID
-      { wch: 20 }, // part num
-      { wch: 20 }, // Admin ID
-      { wch: 30 }, // Kategoriya
-      { wch: 20 }, // Izoh
-      { wch: 20 }, // Sana
-    ];
-    const workbook: XLSX.WorkBook = {
-      Sheets: { data: worksheet },
-      SheetNames: ["data"],
-    };
-
-    const exelBuffer: any = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const blob: Blob = new Blob([exelBuffer], {
-      type: "application/octet-stream",
-    });
-
-    const timestamp = new Date().toISOString().slice(0, 10);
-    const fullName = `${fileName}_${timestamp}.xlsx`;
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fullName;
-    link.click();
-
-    FileSaver.saveAs(blob, `${fileName}.xlsx`);
-  }
-  // format date
-  fmd(date: any) {
-    return this.datePipe.transform(date, "d MMMM, y"); // Example: "31 may, 2025"
-  }
-  // formate currency
-  formatCurrency = (val: number) => {
-    return val ? val.toLocaleString("uz-UZ") : "";
+  // Filter state
+  filters: FilterState = {
+    category_id: "",
+    comment: "",
+    staff_id: "",
+    startDate: "",
+    endDate: "",
+    sortField: "",
+    sortDirection: "",
   };
 
-  // DOWNLOAD EXEL
-  downlaodExcel() {
-    if (this.filteredIncomes.length) {
-      const filteredData = this.filteredIncomes.map((exp) => ({
-        Somda: this.formatCurrency(+exp.uzs_cash) || 0,
-        Dollarda: this.formatCurrency(+exp.usd_cash) || 0,
-        Kartaga: this.formatCurrency(+exp.card) || 0,
-        "Kompaniya Hisobiga": this.formatCurrency(+exp.account) || 0,
-        "Mijoz IDsi": exp.userId,
-        "Partiya Raqami": exp.part_num,
-        Admin_ID: exp.admin_id,
-        Izoh: exp.comment,
-        Kategoriyasi: exp.category.name,
-        Sanasi: this.fmd(exp.date),
-      }));
-      this.exportToExel(filteredData, "Kirimlar");
-      return;
-    }
-    alert("No data");
+  // Table headers
+  tableHeaders: string[] = [
+    "№",
+    "So'mda",
+    "Dollarda",
+    "Kartadan",
+    "Hisobdan",
+    "Izoh",
+    "Mijoz ID",
+    "Partiya",
+    "Kategoriya",
+    "Sana",
+    "Amallar",
+  ];
+
+  // User info
+  adminId: string = "";
+
+  // For unsubscribing
+  private destroy$ = new Subject<void>();
+
+  constructor(
+    private datePipe: DatePipe,
+    private incomeService: IncomesService,
+    private incomeCatService: CategoriesService
+  ) {}
+
+  ngOnInit(): void {
+    this.adminId = localStorage.getItem("userId") || "";
+    this.loadInitialData();
   }
 
-  // add income
-  async addIncome() {
-    const optionsHtml = this.incomeCats
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  // Load all initial data
+  loadInitialData(): void {
+    this.loadIncomeCats();
+    this.loadIncomes();
+  }
+
+  // LOAD INCOME CATEGORIES
+  loadIncomeCats(): void {
+    this.incomeCatService
+      .getInCats()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.incomeCats = res;
+        },
+        error: (err) => {
+          this.handleError("Kategoriyalarni yuklashda xatolik", err);
+        },
+      });
+  }
+
+  // LOAD INCOMES
+  loadIncomes(): void {
+    this.isLoading = true;
+    this.errorMessage = "";
+
+    this.incomeService
+      .getIncomes(this.currentPage)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.incomesList = res.incomes || [];
+          this.totalPages = res.totalPages || 0;
+
+          this.totalItems = res.totalItems || this.totalPages * this.pageSize;
+
+          this.updatePagination();
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.handleError("Ma'lumotlarni yuklashda xatolik", err);
+        },
+      });
+  }
+
+  // LOAD INCOMES WITH FILTERS
+  loadIncomesWithFilters(): void {
+    this.isLoading = true;
+    this.errorMessage = "";
+
+    const queryParams = this.buildQueryParams();
+
+    this.incomeService
+      .getIncomesWithFilter(this.currentPage, queryParams)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.incomesList = res.incomes || [];
+          this.filteredIncomes = res.incomes || [];
+          // Don't overwrite currentPage - already set before API call
+          this.totalPages = res.totalPages || 0;
+
+          // Calculate totalItems if backend doesn't provide it
+          this.totalItems = res.totalItems || this.totalPages * this.pageSize;
+
+          this.updatePagination();
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.handleError("Filterlangan ma'lumotlarni yuklashda xatolik", err);
+        },
+      });
+  }
+
+  // BUILD QUERY PARAMS
+  buildQueryParams(): string {
+    const params: string[] = [];
+
+    if (this.filters.category_id)
+      params.push(`category_id=${this.filters.category_id}`);
+    if (this.filters.comment) params.push(`comment=${this.filters.comment}`);
+    if (this.filters.staff_id) params.push(`staff_id=${this.filters.staff_id}`);
+    if (this.filters.startDate)
+      params.push(`startDate=${this.filters.startDate}`);
+    if (this.filters.endDate) params.push(`endDate=${this.filters.endDate}`);
+    if (this.filters.sortField) params.push(`sort=${this.filters.sortField}`);
+    if (this.filters.sortDirection)
+      params.push(`order=${this.filters.sortDirection}`);
+
+    return params.length > 0 ? `&${params.join("&")}` : "";
+  }
+
+  // UPDATE PAGINATION
+  updatePagination(): void {
+    this.pages = Array.from({ length: this.totalPages }, (_, i) => i);
+  }
+
+  // PAGINATION - GO TO PAGE
+  goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages) return;
+    this.currentPage = page;
+    this.scrollToTop();
+
+    if (this.hasActiveFilters()) {
+      this.loadIncomesWithFilters();
+    } else {
+      this.loadIncomes();
+    }
+  }
+
+  // HANDLE PAGINATION CHANGE (Material Paginator)
+  onPageChange(event: any): void {
+    this.currentPage = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.scrollToTop();
+
+    if (this.hasActiveFilters()) {
+      this.loadIncomesWithFilters();
+    } else {
+      this.loadIncomes();
+    }
+  }
+
+  // CHECK IF FILTERS ARE ACTIVE
+  hasActiveFilters(): boolean {
+    return (
+      !!this.filters.category_id ||
+      !!this.filters.comment ||
+      !!this.filters.staff_id ||
+      !!this.filters.startDate ||
+      !!this.filters.endDate
+    );
+  }
+
+  // APPLY FILTERS
+  applyFilter(filterType: string, value: any): void {
+    this.currentPage = 0; // Reset to first page
+
+    switch (filterType) {
+      case "category":
+        this.filters.category_id = value;
+        break;
+      case "comment":
+        this.filters.comment = value;
+        break;
+      case "staff":
+        this.filters.staff_id = value;
+        break;
+      case "startDate":
+        this.filters.startDate = this.formatDate(value);
+        break;
+      case "endDate":
+        this.filters.endDate = this.formatDate(value);
+        break;
+    }
+
+    if (this.hasActiveFilters()) {
+      this.loadIncomesWithFilters();
+    } else {
+      this.loadIncomes();
+    }
+  }
+
+  // CLEAR ALL FILTERS
+  clearFilters(): void {
+    this.filters = {
+      category_id: "",
+      comment: "",
+      staff_id: "",
+      startDate: "",
+      endDate: "",
+      sortField: "",
+      sortDirection: "",
+    };
+    this.currentPage = 0;
+    this.loadIncomes();
+  }
+
+  // SORTING
+  sortData(sort: Sort): void {
+    if (!sort.active || sort.direction === "") {
+      this.filters.sortField = "";
+      this.filters.sortDirection = "";
+    } else {
+      this.filters.sortField = sort.active;
+      this.filters.sortDirection = sort.direction;
+    }
+
+    if (this.hasActiveFilters()) {
+      this.loadIncomesWithFilters();
+    } else {
+      this.loadIncomes();
+    }
+  }
+
+  // TOGGLE ADVANCED FILTERS
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+
+  // ADD NEW INCOME
+  async addIncome(): Promise<void> {
+    const categoryOptions = this.incomeCats
       .map((cat) => `<option value="${cat.id}">${cat.name}</option>`)
       .join("");
 
     const result = await Swal.fire({
       title: "Yangi Kirim Qo'shish",
-      html:
-        `<div class="form-group">` +
-        '<input id="input-uzs" type="text" class="form-control m-2" placeholder="Naqd Somda..." />' +
-        '<input id="input-usd" type="text" class="form-control m-2" placeholder="Naqd Dollarda..." />' +
-        '<input id="input-card" type="text" class="form-control m-2" placeholder="Kartadan..." />' +
-        '<input id="input-account" type="text" class="form-control m-2" placeholder="Kompaniya Hisobiga..." />' +
-        '<input id="input-comment" type="text" class="form-control m-2" placeholder="IZOH" />' +
-        ` <select id="swal-catId" class="form-control m-2" >
-        <option value="" disabled selected>Kategoriya Tanlang</option>
-        ${optionsHtml}
-      </select>` +
-        `</div>`,
+      html: `
+        <div style="text-align: left;">
+          <div class="form-group mb-3">
+            <label class="form-label">Naqd So'mda</label>
+            <input id="input-uzs" type="number" class="form-control" placeholder="0" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Naqd Dollarda</label>
+            <input id="input-usd" type="number" class="form-control" placeholder="0" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kartadan</label>
+            <input id="input-card" type="number" class="form-control" placeholder="0" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kompaniya Hisobiga</label>
+            <input id="input-account" type="number" class="form-control" placeholder="0" />
+          </div>
+     
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kategoriya *</label>
+            <select id="swal-catId" class="form-control">
+              <option value="" disabled selected>Tanlang</option>
+              ${categoryOptions}
+            </select>
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Izoh</label>
+            <textarea id="input-comment" class="form-control" rows="2" placeholder="Izoh yozing..."></textarea>
+          </div>
+        </div>
+      `,
+      width: "600px",
       showCancelButton: true,
       confirmButtonText: "Saqlash",
       cancelButtonText: "Bekor Qilish",
@@ -353,133 +370,151 @@ export class IncomesComponent implements OnInit {
         cancelButton: "btn btn-danger",
       },
       buttonsStyling: false,
-
       preConfirm: () => {
-        let usd_cash = Number($("#input-usd").val());
-        let uzs_cash = Number($("#input-uzs").val());
-        let card = Number($("#input-card").val());
-        let account = Number($("#input-account").val());
-        let userId = Number($("#input-userId").val());
-        let part_num = $("#input-part_num").val();
-        let date = Date.now();
-        let comment = $("#input-comment").val();
-        let category_id = Number($("#swal-catId").val());
-        +usd_cash;
+        const uzs_cash = Number(
+          (document.getElementById("input-uzs") as HTMLInputElement).value
+        );
+        const usd_cash = Number(
+          (document.getElementById("input-usd") as HTMLInputElement).value
+        );
+        const card = Number(
+          (document.getElementById("input-card") as HTMLInputElement).value
+        );
+        const account = Number(
+          (document.getElementById("input-account") as HTMLInputElement).value
+        );
+
+        const category_id = Number(
+          (document.getElementById("swal-catId") as HTMLSelectElement).value
+        );
+        const comment = (
+          document.getElementById("input-comment") as HTMLTextAreaElement
+        ).value;
+
+        if (!category_id) {
+          Swal.showValidationMessage("Kategoriya tanlanishi kerak!");
+          return false;
+        }
+
         return {
-          usd_cash,
           uzs_cash,
+          usd_cash,
           card,
           account,
-          userId,
-          part_num,
-          admin_id: this.staff_id,
-          date,
-          comment,
+
+          admin_id: this.adminId,
           category_id,
+          comment,
+          date: new Date().toISOString(),
         };
       },
     });
 
     if (result.isConfirmed && result.value) {
-      if (!result.value.category_id) {
-        Swal.fire("Xatolik", "KATEGORIYA tanlanishi kerak!", "error");
-        return;
-      }
-      Swal.showLoading();
-      this.incomeService.addIncome(result.value).subscribe({
-        next: (res) => {
-          this.loadIncomes();
-          Swal.fire("Muvaffaqiyat!", "Yangi Kirim kiritildi!.", "success");
-        },
-        error: (err) => {
-          Swal.fire("Xatolik", err.error?.error || err.message, "error");
+      Swal.fire({
+        title: "Saqlanmoqda...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
         },
       });
+
+      this.incomeService
+        .addIncome(result.value)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.loadIncomes();
+            Swal.fire("Muvaffaqiyat!", "Yangi kirim qo'shildi!", "success");
+          },
+          error: (err) => {
+            Swal.fire("Xatolik", err.error?.error || err.message, "error");
+          },
+        });
     }
   }
 
-  // UPDATING INCOME DATA
-  async editIncome(income: any) {
-    // console.log("income data ", income);
-
-    const optionsHtml = this.incomeCats
+  // EDIT INCOME
+  async editIncome(income: Income): Promise<void> {
+    const categoryOptions = this.incomeCats
       .map(
         (cat) =>
-          `<option value="${cat.id}"${
+          `<option value="${cat.id}" ${
             cat.id === income.category_id ? "selected" : ""
-          }>${cat.name ? cat.name : ""}</option>`
+          }>${cat.name}</option>`
       )
       .join("");
 
     const result = await Swal.fire({
-      title: "Kirimni Tahrirlash1!",
+      title: "Kirimni Tahrirlash",
       html: `
-  <div class="form-group">
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-usd" style="width: 180px;">Naqd Dollarda</label>
-      <input id="input-usd" value="${
-        income.usd_cash ? income.usd_cash : ""
-      }" type="text" class="form-control" placeholder="Naqd Dollarda..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-uzs" style="width: 180px;">Naqd So'mda</label>
-      <input id="input-uzs" type="text" value="${
-        income.uzs_cash ? income.uzs_cash : ""
-      }" class="form-control" placeholder="Naqd So'mda..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-card" style="width: 180px;">Kartadan</label>
-      <input id="input-card" type="text" value="${
-        income.card ? income.card : ""
-      }" class="form-control" placeholder="Kartadan..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-account" style="width: 180px;">Kompaniya Hisobiga</label>
-      <input id="input-account" type="text" value="${
-        income.account ? income.account : ""
-      }" class="form-control" placeholder="Kompaniya Hisobiga..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-userId" style="width: 180px;">Mijoz IDsi</label>
-      <input id="input-userId" type="text" value="${
-        income.userId ? income.userId : ""
-      }" class="form-control" placeholder="Mijoz IDsi..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-part_num" style="width: 180px;">Partiya Raqami</label>
-      <input id="input-part_num" type="text" value="${
-        income.part_num ? income.part_num : ""
-      }" class="form-control" placeholder="Partiya Raqami..." />
-    </div>
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-date" style="width: 180px;">Olingan Sanasi</label>
-      <input id="input-date" type="date" value="${
-        income.date ? income.date.split("T")[0] : ""
-      }" class="form-control" placeholder="Olingan Sanasi..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-comment" style="width: 180px;">IZOH</label>
-      <input id="input-comment" type="text" value="${
-        income.comment ? income.comment : ""
-      }" class="form-control" placeholder="IZOH" />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-3">
-      <label for="swal-catId" style="width: 180px;">Kategoriya Tanlang</label>
-      <select id="swal-catId" class="form-control">
-        <option value="" disabled selected>Kategoriya Tanlang</option>
-        ${optionsHtml}
-      </select>
-    </div>
-  </div>
-`,
-
+        <div style="text-align: left;">
+          <div class="form-group mb-3">
+            <label class="form-label">Naqd So'mda</label>
+            <input id="input-uzs" type="number" class="form-control" value="${
+              income.uzs_cash || 0
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Naqd Dollarda</label>
+            <input id="input-usd" type="number" class="form-control" value="${
+              income.usd_cash || 0
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kartadan</label>
+            <input id="input-card" type="number" class="form-control" value="${
+              income.card || 0
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kompaniya Hisobiga</label>
+            <input id="input-account" type="number" class="form-control" value="${
+              income.account || 0
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Mijoz IDsi</label>
+            <input id="input-userId" type="number" class="form-control" value="${
+              income.userId || ""
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Partiya Raqami</label>
+            <input id="input-part_num" type="text" class="form-control" value="${
+              income.part_num || ""
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Sana *</label>
+            <input id="input-date" type="date" class="form-control" value="${
+              income.date ? income.date.split("T")[0] : ""
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kategoriya *</label>
+            <select id="swal-catId" class="form-control">
+              <option value="" disabled>Tanlang</option>
+              ${categoryOptions}
+            </select>
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Izoh</label>
+            <textarea id="input-comment" class="form-control" rows="2">${
+              income.comment || ""
+            }</textarea>
+          </div>
+        </div>
+      `,
+      width: "600px",
       showCancelButton: true,
       confirmButtonText: "Saqlash",
       cancelButtonText: "Bekor Qilish",
@@ -488,97 +523,205 @@ export class IncomesComponent implements OnInit {
         cancelButton: "btn btn-danger",
       },
       buttonsStyling: false,
-
       preConfirm: () => {
-        let usd_cash = Number($("#input-usd").val());
-        let uzs_cash = Number($("#input-uzs").val());
-        let card = Number($("#input-card").val());
-        let account = Number($("#input-account").val());
-        let userId = Number($("#input-userId").val());
-        let part_num = $("#input-part_num").val();
-        let date = $("#input-date").val();
-        let comment = $("#input-comment").val();
-        let category_id = Number($("#swal-catId").val());
+        const uzs_cash = Number(
+          (document.getElementById("input-uzs") as HTMLInputElement).value
+        );
+        const usd_cash = Number(
+          (document.getElementById("input-usd") as HTMLInputElement).value
+        );
+        const card = Number(
+          (document.getElementById("input-card") as HTMLInputElement).value
+        );
+        const account = Number(
+          (document.getElementById("input-account") as HTMLInputElement).value
+        );
+        const userId = Number(
+          (document.getElementById("input-userId") as HTMLInputElement).value
+        );
+        const part_num = (
+          document.getElementById("input-part_num") as HTMLInputElement
+        ).value;
+        const date = (document.getElementById("input-date") as HTMLInputElement)
+          .value;
+        const category_id = Number(
+          (document.getElementById("swal-catId") as HTMLSelectElement).value
+        );
+        const comment = (
+          document.getElementById("input-comment") as HTMLTextAreaElement
+        ).value;
+
+        if (!category_id || !date) {
+          Swal.showValidationMessage("Kategoriya va Sana kiritilishi kerak!");
+          return false;
+        }
 
         return {
-          usd_cash,
           uzs_cash,
+          usd_cash,
           card,
           account,
           userId,
           part_num,
           date,
-          comment,
           category_id,
+          comment,
         };
       },
     });
 
     if (result.isConfirmed && result.value) {
-      if (!result.value.category_id || !result.value.date) {
-        Swal.fire(
-          "Xatolik",
-          "KATEGORIYA tanlanishi va  SANA kiritilishi kerak!",
-          "error"
-        );
-        return;
-      }
-
-      Swal.showLoading();
-      this.incomeService.updateIncome(income.id, result.value).subscribe({
-        next: (res) => {
-          this.loadIncomes();
-          Swal.fire("Muvaffaqiyat!", "Kirim Tahrirlandi!.", "success");
-        },
-        error: (err) => {
-          Swal.fire("Xatolik", err.error?.error || err.message, "error");
+      Swal.fire({
+        title: "Saqlanmoqda...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
         },
       });
+
+      this.incomeService
+        .updateIncome(income.id, result.value)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.loadIncomes();
+            Swal.fire("Muvaffaqiyat!", "Kirim tahrirlandi!", "success");
+          },
+          error: (err) => {
+            Swal.fire("Xatolik", err.error?.error || err.message, "error");
+          },
+        });
     }
   }
 
-  // deleting the income
-  delete(id: string) {
-    Swal.fire({
-      title: "O'chirish Amaliyoti uchub parol kiriting",
-      allowEnterKey: true,
-      input: "text",
-      confirmButtonText: "Kiritish",
+  // DELETE INCOME
+  async deleteIncome(id: number): Promise<void> {
+    const confirmResult = await Swal.fire({
+      title: "Rostan ham o'chirmoqchimisiz?",
+      text: "Bu amalni qaytarib bo'lmaydi!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ha, o'chirish",
+      cancelButtonText: "Bekor qilish",
       customClass: {
-        confirmButton: "btn btn-success",
+        confirmButton: "btn btn-danger",
+        cancelButton: "btn btn-secondary",
       },
       buttonsStyling: false,
-
-      preConfirm: (valueB) => {
-        if (valueB == "2") {
-          Swal.fire({
-            icon: "question",
-            title: "Rostan ham bu KIRIM malumotlarini o'chirmoqchimisiz",
-            showCancelButton: true,
-            confirmButtonText: "Ha, O'chirish",
-            cancelButtonText: "Bekor qilish",
-          }).then((result) => {
-            if (result.isConfirmed) {
-              this.incomeService.delete(+id).subscribe({
-                next: () => {
-                  Swal.fire(
-                    "Muvaffaqiyat",
-                    "KIRIM malumotlari o'chirildi!",
-                    "success"
-                  );
-                  this.loadIncomes();
-                },
-                error: (err) => {
-                  Swal.fire("Xatolik", err.error.error, "error");
-                },
-              });
-            }
-          });
-        } else {
-          Swal.fire("Parol Notogri!", "Boshqattan parol kiriting!", "error");
-          return;
-        }
-      },
     });
+
+    if (confirmResult.isConfirmed) {
+      Swal.fire({
+        title: "O'chirilmoqda...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      this.incomeService
+        .delete(id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.loadIncomes();
+            Swal.fire("O'chirildi!", "Kirim o'chirildi!", "success");
+          },
+          error: (err) => {
+            Swal.fire("Xatolik", err.error?.error || err.message, "error");
+          },
+        });
+    }
+  }
+
+  // EXPORT TO EXCEL
+  exportToExcel(): void {
+    const dataToExport = this.filteredIncomes.length
+      ? this.filteredIncomes
+      : this.incomesList;
+
+    if (!dataToExport.length) {
+      Swal.fire("Xatolik", "Export qilish uchun ma'lumot yo'q!", "warning");
+      return;
+    }
+
+    const formattedData = dataToExport.map((inc, index) => ({
+      "№": index + 1,
+      "So'mda": this.formatCurrency(inc.uzs_cash),
+      Dollarda: this.formatCurrency(inc.usd_cash),
+      Kartadan: this.formatCurrency(inc.card),
+      Hisobdan: this.formatCurrency(inc.account),
+      "Mijoz ID": inc.userId || "",
+      Partiya: inc.part_num || "",
+      Izoh: inc.comment || "",
+      Kategoriya: inc.category?.name || "",
+      Sana: this.formatDate(inc.date),
+    }));
+
+    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(formattedData);
+    worksheet["!cols"] = [
+      { wch: 5 }, // №
+      { wch: 15 }, // So'mda
+      { wch: 15 }, // Dollarda
+      { wch: 15 }, // Kartadan
+      { wch: 15 }, // Hisobdan
+      { wch: 12 }, // Mijoz ID
+      { wch: 15 }, // Partiya
+      { wch: 30 }, // Izoh
+      { wch: 20 }, // Kategoriya
+      { wch: 12 }, // Sana
+    ];
+
+    const workbook: XLSX.WorkBook = {
+      Sheets: { Kirimlar: worksheet },
+      SheetNames: ["Kirimlar"],
+    };
+
+    const excelBuffer: any = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+
+    const blob: Blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const timestamp = this.datePipe.transform(new Date(), "yyyy-MM-dd");
+    FileSaver.saveAs(blob, `Kirimlar_${timestamp}.xlsx`);
+  }
+
+  // HELPER: FORMAT DATE
+  formatDate(date: any): string {
+    if (!date) return "";
+    return this.datePipe.transform(date, "yyyy-MM-dd") || "";
+  }
+
+  // HELPER: FORMAT CURRENCY
+  formatCurrency(value: number): string {
+    if (!value) return "0";
+    return value.toLocaleString("uz-UZ");
+  }
+
+  // HELPER: HANDLE ERRORS
+  handleError(title: string, err: any): void {
+    console.error(title, err);
+    this.errorMessage = err.error?.error || err.message || "Noma'lum xatolik";
+    Swal.fire("Xatolik", this.errorMessage, "error");
+  }
+
+  // HELPER: SCROLL TO TOP
+  scrollToTop(): void {
+    const element = document.getElementById("listcard");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
+  // HELPER: GET TOTAL AMOUNT
+  getTotalAmount(field: keyof Income): number {
+    return this.incomesList.reduce(
+      (sum, income) => sum + (Number(income[field]) || 0),
+      0
+    );
   }
 }

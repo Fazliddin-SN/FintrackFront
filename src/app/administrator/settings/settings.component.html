@@ -1,3 +1,29 @@
-<app-expense-categories />
+<div class="main-content">
+    <div class="container-fluid">
+        <!-- Page Header -->
+        <div class="row">
+            <div class="col-12">
+                <div class="page-header">
+                    <h3 class="page-title">
+                        <i class="material-icons">settings</i>
+                        Sozlamalar
+                    </h3>
+                    <p class="page-subtitle">Kategoriyalarni boshqarish</p>
+                </div>
+            </div>
+        </div>
 
-<app-categories-list />
+        <!-- Categories Section -->
+        <div class="row">
+            <!-- Income Categories -->
+            <div class="col-lg-6 col-md-12">
+                <app-categories-list></app-categories-list>
+            </div>
+
+            <!-- Expense Categories -->
+            <div class="col-lg-6 col-md-12">
+                <app-expense-categories></app-expense-categories>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,329 +1,438 @@
-import { Component, inject, OnInit } from "@angular/core";
-
-import Swal from "sweetalert2";
-import * as $ from "jquery";
+import { Component, OnInit } from "@angular/core";
 import { DatePipe } from "@angular/common";
 import { Sort } from "@angular/material/sort";
-
+import Swal from "sweetalert2";
 import * as XLSX from "xlsx";
 import * as FileSaver from "file-saver";
 
 import { IncomesService } from "src/app/services/incomes.service";
 import { CategoriesService } from "src/app/services/categories.service";
 
-declare interface TableData {
-  headerRow: string[];
+interface FilterState {
+  category_id: string;
+  comment: string;
+  staff_id: string;
+  startDate: string;
+  endDate: string;
+  sort: string;
+  order: string;
 }
+
 @Component({
   selector: "app-all-incomes",
   templateUrl: "./all-incomes.component.html",
   styleUrls: ["./all-incomes.component.css"],
 })
-export class AllIncomesComponent {
-  private incomeService = inject(IncomesService);
-  private incomeCatService = inject(CategoriesService);
-
-  incomesList: string[] = [];
+export class AllIncomesComponent implements OnInit {
+  // Data
+  incomesList: any[] = [];
   incomeCats: any[] = [];
-  errorMessage: string;
-  tableData1: TableData;
 
-  danValue: string;
-  gachaValue: string;
+  // UI State
+  isLoading: boolean = false;
+  errorMessage: string = "";
+  showAdvancedFilters: boolean = false;
 
-  // pagination
+  // Pagination
   currentPage: number = 0;
-  totalPages: number;
-  needPagination: boolean;
-  mypages = [];
-  isPagesActive: boolean;
-  staff_id: string;
+  pageSize: number = 100;
+  totalItems: number = 0;
+  totalPages: number = 0;
+  pages: number[] = [];
 
-  // STORING FILTERED INCOME DATA
-  filteredIncomes = [];
+  // Filters - Single source of truth
+  filters: FilterState = {
+    category_id: "",
+    comment: "",
+    staff_id: "",
+    startDate: "",
+    endDate: "",
+    sort: "id",
+    order: "desc",
+  };
 
-  constructor(private datePipe: DatePipe) {
-    this.loadIncomes();
-    this.loadIncomeCats();
-  }
+  // Table columns
+  displayedColumns: string[] = [
+    "index",
+    "uzs_cash",
+    "usd_cash",
+    "card",
+    "account",
+    "admin_id",
+    "userId",
+    "part_num",
+    "comment",
+    "category",
+    "status",
+    "date",
+  ];
+
+  columnHeaders: { [key: string]: string } = {
+    index: "№",
+    uzs_cash: "So'mda",
+    usd_cash: "Dollarda",
+    card: "Kartadan",
+    account: "Kompaniya hisobiga",
+    admin_id: "Admin IDsi",
+    userId: "Mijoz IDsi",
+    part_num: "Partiya",
+    comment: "Izoh",
+    category: "Kategoriya",
+    status: "Holat",
+    date: "Sana",
+  };
+
+  // Expose Math for template
+  Math = Math;
+
+  constructor(
+    private incomeService: IncomesService,
+    private incomeCatService: CategoriesService,
+    private datePipe: DatePipe
+  ) {}
+
   ngOnInit(): void {
-    //pagination
-    this.currentPage = 0;
-    this.needPagination = false;
-    this.isPagesActive = false;
-
-    this.tableData1 = {
-      headerRow: [
-        "№/Jami",
-        "So'mda",
-        "Dollarda",
-        "Kartadan",
-        "Kompaniya hisobiga",
-        "Admin IDsi",
-        "Mijoz IDsi",
-        "Partiya Raqami",
-        "Izoh",
-        "Kategoriyasi",
-        "CheckedStatus",
-        "Sanasi",
-      ],
-    };
-    this.staff_id = localStorage.getItem("userId");
-    this.loadIncomes();
     this.loadIncomeCats();
-  }
-
-  pagebyNum(ipage) {
-    this.currentPage = ipage;
-    this.isPagesActive = true;
-    document.getElementById("listcard").scrollIntoView();
     this.loadIncomes();
   }
-  // TRANSFORMING DATE VALUES
-  fromFunction(date) {
-    this.danValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
-  }
-  toFunction(date) {
-    this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
-  }
 
-  // Component-level filter and sort state
-  sortCategory_id: string = "";
-  sortComment: string = "";
-  sortStaff_id: string = "";
-  sortField: string = "";
-  sortDirection: string = "";
-
-  // Called when user sorts a column
-  sortData(sort: Sort) {
-    if (!sort.active || sort.direction === "") {
-      this.sortField = "";
-      this.sortDirection = "";
-    } else {
-      this.sortField = sort.active;
-      this.sortDirection = sort.direction;
-    }
-
-    if (this.danValue || this.gachaValue) {
-      return this.getListOfIncomesWithDate();
-    }
-    // Reuse existing filter + sort values
-    this.getListOfIncomesWIthFilter(
-      this.sortCategory_id,
-      this.sortComment,
-      this.sortStaff_id,
-      this.danValue,
-      this.gachaValue,
-      this.sortField,
-      this.sortDirection
-    );
-    this.getListOfIncomesWithDate();
-  }
-
-  // Called when user applies a filter (e.g. selects category, comment, staff)
-  applyFilters(category_id: string, comment: string, staff_id: string) {
-    this.sortCategory_id = category_id;
-    this.sortComment = comment;
-    this.sortStaff_id = staff_id;
-
-    // Reuse last sort field + direction
-
-    // Reuse last sort field + direction
-    this.getListOfIncomesWIthFilter(
-      category_id,
-      comment,
-      staff_id,
-      this.danValue,
-      this.gachaValue,
-      this.sortField,
-      this.sortDirection
-    );
-  }
-
-  // LOAD  INCOME CATS
-  loadIncomeCats() {
-    return this.incomeCatService.getInCats().subscribe({
+  /**
+   * Load income categories
+   */
+  loadIncomeCats(): void {
+    this.incomeCatService.getInCats().subscribe({
       next: (res) => {
         this.incomeCats = res;
       },
       error: (err) => {
-        this.errorMessage = err.error.error;
+        console.error("Error loading categories:", err);
+        this.errorMessage = "Kategoriyalarni yuklashda xatolik";
       },
     });
   }
 
-  // LOADING INCOMES WITHOUT FILTER
-  loadIncomes() {
-    this.incomeService.getIncomes(this.currentPage).subscribe({
-      next: (res) => {
-        this.incomesList = res.incomes;
-        this.filteredIncomes = [];
-        // console.log("incomes ", this.incomesList);
-        this.currentPage = res.currentPage;
-        this.totalPages = res.totalPages;
-        if (this.totalPages > 1) {
-          this.needPagination = true;
-          for (let i = 0; i < this.totalPages; i++) {
-            this.mypages[i] = { id: "name" };
-          }
-        }
-      },
-      error: (err) => {
-        this.errorMessage = err.error.error;
-      },
-    });
-  }
-  // LOADING INCOMES WITH DATE FILTER
-  getListOfIncomesWithDate() {
-    const filterLink =
-      `&startDate=` +
-      this.danValue +
-      `&endDate=` +
-      this.gachaValue +
-      `&category_id=` +
-      this.sortCategory_id +
-      `&comment=` +
-      this.sortComment +
-      `&staff_id=` +
-      this.sortStaff_id +
-      `&sort=` +
-      this.sortField +
-      `&order=` +
-      this.sortDirection;
+  /**
+   * Main function to load incomes with current filter state
+   */
+  loadIncomes(): void {
+    this.isLoading = true;
+    this.errorMessage = "";
 
-    return this.incomeService
+    const filterLink = this.buildFilterLink();
+
+    this.incomeService
       .getIncomesWithFilter(this.currentPage, filterLink)
       .subscribe({
         next: (res) => {
-          this.incomesList = res.incomes;
-          this.filteredIncomes = res.incomes;
-          this.currentPage = res.currentPage;
-          this.totalPages = res.totalPages;
-          if (this.totalPages > 1) {
-            this.needPagination = true;
-            for (let i = 0; i < this.totalPages; i++) {
-              this.mypages[i] = { id: "name" };
-            }
-          }
+          this.incomesList = res.incomes || [];
+          this.currentPage = res.currentPage || 0;
+          this.totalItems = res.totalItems || 0;
+          this.totalPages = res.totalPages || 0;
+          this.generatePageNumbers();
+          this.isLoading = false;
         },
         error: (err) => {
-          this.errorMessage = err.error.error;
-        },
-      });
-  }
-  // LOAD INCOMES WITH FILTER OF CATS, COMMENT AND ADMIN ID
-  getListOfIncomesWIthFilter(
-    category_id: string,
-    comment: string,
-    staff_id: string,
-    startDate: string,
-    endDate: string,
-    sortField: string,
-    sortDirection: string
-  ) {
-    const filterLink =
-      `&category_id=` +
-      category_id +
-      `&comment=` +
-      comment +
-      `&staff_id=` +
-      staff_id +
-      `&startDate=` +
-      startDate +
-      `&endDate=` +
-      endDate +
-      `&sort=` +
-      sortField +
-      `&order=` +
-      sortDirection;
-
-    return this.incomeService
-      .getIncomesWithFilter(this.currentPage, filterLink)
-      .subscribe({
-        next: (res) => {
-          this.incomesList = res.incomes;
-          this.filteredIncomes = res.incomes;
-          this.currentPage = res.currentPage;
-          this.totalPages = res.totalPages;
-          if (this.totalPages > 1) {
-            this.needPagination = true;
-            for (let i = 0; i < this.totalPages; i++) {
-              this.mypages[i] = { id: "name" };
-            }
-          }
-        },
-        error: (err) => {
-          this.errorMessage = err.error.error;
+          console.error("Error loading incomes:", err);
+          this.errorMessage =
+            "Ma'lumotlarni yuklashda xatolik yuz berdi. Iltimos qaytadan urinib ko'ring.";
+          this.isLoading = false;
         },
       });
   }
 
-  // UPLOADING FILTERED INCOME DATA IN EXEL FILE
-  exportToExel(data: any[], fileName: string): void {
-    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
-    // Set column widths manually
-    worksheet["!cols"] = [
-      { wch: 10 }, // Soʻmda
-      { wch: 10 }, // Dollar
-      { wch: 10 }, // Karta
-      { wch: 20 }, // Hisobdan
-      { wch: 10 }, // user ID
-      { wch: 20 }, // part num
-      { wch: 20 }, // Admin ID
-      { wch: 30 }, // Kategoriya
-      { wch: 20 }, // Izoh
-      { wch: 20 }, // Sana
-    ];
-    const workbook: XLSX.WorkBook = {
-      Sheets: { data: worksheet },
-      SheetNames: ["data"],
+  /**
+   * Build filter link from current filter state
+   */
+  buildFilterLink(): string {
+    const params: string[] = [];
+
+    if (this.filters.category_id) {
+      params.push(`category_id=${this.filters.category_id}`);
+    }
+    if (this.filters.comment) {
+      params.push(`comment=${encodeURIComponent(this.filters.comment)}`);
+    }
+    if (this.filters.staff_id) {
+      params.push(`staff_id=${this.filters.staff_id}`);
+    }
+    if (this.filters.startDate) {
+      params.push(`startDate=${this.filters.startDate}`);
+    }
+    if (this.filters.endDate) {
+      params.push(`endDate=${this.filters.endDate}`);
+    }
+    if (this.filters.sort) {
+      params.push(`sort=${this.filters.sort}`);
+    }
+    if (this.filters.order) {
+      params.push(`order=${this.filters.order}`);
+    }
+
+    return params.length > 0 ? "&" + params.join("&") : "";
+  }
+
+  /**
+   * Apply filter - update state and reload
+   */
+  applyFilter(filterType: string, value: any): void {
+    switch (filterType) {
+      case "category":
+        this.filters.category_id = value;
+        break;
+      case "comment":
+        this.filters.comment = value;
+        break;
+      case "staff":
+        this.filters.staff_id = value;
+        break;
+      case "startDate":
+        this.filters.startDate = value
+          ? this.datePipe.transform(value, "yyyy-MM-dd")
+          : "";
+        break;
+      case "endDate":
+        this.filters.endDate = value
+          ? this.datePipe.transform(value, "yyyy-MM-dd")
+          : "";
+        break;
+    }
+
+    this.currentPage = 0; // Reset to first page
+    this.loadIncomes();
+  }
+
+  /**
+   * Clear all filters
+   */
+  clearFilters(): void {
+    this.filters = {
+      category_id: "",
+      comment: "",
+      staff_id: "",
+      startDate: "",
+      endDate: "",
+      sort: "id",
+      order: "desc",
     };
-
-    const exelBuffer: any = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const blob: Blob = new Blob([exelBuffer], {
-      type: "application/octet-stream",
-    });
-
-    const timestamp = new Date().toISOString().slice(0, 10);
-    const fullName = `${fileName}_${timestamp}.xlsx`;
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fullName;
-    link.click();
-
-    FileSaver.saveAs(blob, `${fileName}.xlsx`);
+    this.currentPage = 0;
+    this.loadIncomes();
   }
-  // format date
-  fmd(date: any) {
-    return this.datePipe.transform(date, "d MMMM, y"); // Example: "31 may, 2025"
-  }
-  // formate currency
-  formatCurrency = (val: number) => {
-    return val ? val.toLocaleString("uz-UZ") : "";
-  };
 
-  // DOWNLOAD EXEL
-  downlaodExcel() {
-    if (this.filteredIncomes.length) {
-      const filteredData = this.filteredIncomes.map((exp) => ({
-        Somda: this.formatCurrency(+exp.uzs_cash) || 0,
-        Dollarda: this.formatCurrency(+exp.usd_cash) || 0,
-        Kartaga: this.formatCurrency(+exp.card) || 0,
-        "Kompaniya Hisobiga": this.formatCurrency(+exp.account) || 0,
-        "Mijoz IDsi": exp.userId,
-        "Partiya Raqami": exp.part_num,
-        Admin_ID: exp.admin_id,
-        Izoh: exp.comment,
-        Kategoriyasi: exp.category.name,
-        Sanasi: this.fmd(exp.date),
-      }));
-      this.exportToExel(filteredData, "Kirimlar");
+  /**
+   * Check if any filters are active
+   */
+  hasActiveFilters(): boolean {
+    return !!(
+      this.filters.category_id ||
+      this.filters.comment ||
+      this.filters.staff_id ||
+      this.filters.startDate ||
+      this.filters.endDate
+    );
+  }
+
+  /**
+   * Toggle advanced filters visibility
+   */
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+
+  /**
+   * Sort data
+   */
+  sortData(sort: Sort): void {
+    if (!sort.active || sort.direction === "") {
+      this.filters.sort = "id";
+      this.filters.order = "desc";
+    } else {
+      this.filters.sort = sort.active;
+      this.filters.order = sort.direction;
+    }
+
+    this.loadIncomes();
+  }
+
+  /**
+   * Go to specific page
+   */
+  goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages) return;
+
+    this.currentPage = page;
+    this.loadIncomes();
+
+    // Scroll to top of table
+    document.getElementById("listcard")?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  /**
+   * Generate page numbers for pagination
+   */
+  generatePageNumbers(): void {
+    this.pages = [];
+
+    // Show max 5 pages at a time
+    const maxPages = 5;
+    let startPage = Math.max(0, this.currentPage - Math.floor(maxPages / 2));
+    let endPage = Math.min(this.totalPages, startPage + maxPages);
+
+    // Adjust start if we're near the end
+    if (endPage - startPage < maxPages) {
+      startPage = Math.max(0, endPage - maxPages);
+    }
+
+    for (let i = startPage; i < endPage; i++) {
+      this.pages.push(i);
+    }
+  }
+
+  /**
+   * Export to Excel
+   */
+  downloadExcel(): void {
+    if (this.incomesList.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Ma'lumot yo'q",
+        text: "Export qilish uchun ma'lumot mavjud emas",
+      });
       return;
     }
-    alert("No data");
+
+    // Show loading
+    Swal.fire({
+      title: "Excel fayli tayyorlanmoqda...",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    try {
+      const exportData = this.incomesList.map((income, index) => ({
+        "№": index + 1,
+        "So'mda": this.formatCurrency(income.uzs_cash),
+        Dollarda: this.formatCurrency(income.usd_cash),
+        Kartadan: this.formatCurrency(income.card),
+        "Kompaniya Hisobiga": this.formatCurrency(income.account),
+        "Admin IDsi": income.admin_id || "",
+        "Mijoz IDsi": income.userId || "",
+        "Partiya Raqami": income.part_num || "",
+        Izoh: income.comment || "",
+        Kategoriya: income.category?.name || "",
+        Holat: income.checkedStatus?.name || "",
+        Sana: this.datePipe.transform(income.date, "dd.MM.yyyy HH:mm"),
+      }));
+
+      const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths
+      worksheet["!cols"] = [
+        { wch: 5 }, // №
+        { wch: 15 }, // So'mda
+        { wch: 15 }, // Dollarda
+        { wch: 15 }, // Kartadan
+        { wch: 20 }, // Kompaniya Hisobiga
+        { wch: 12 }, // Admin IDsi
+        { wch: 12 }, // Mijoz IDsi
+        { wch: 15 }, // Partiya
+        { wch: 30 }, // Izoh
+        { wch: 15 }, // Kategoriya
+        { wch: 15 }, // Holat
+        { wch: 18 }, // Sana
+      ];
+
+      const workbook: XLSX.WorkBook = {
+        Sheets: { Kirimlar: worksheet },
+        SheetNames: ["Kirimlar"],
+      };
+
+      const excelBuffer: any = XLSX.write(workbook, {
+        bookType: "xlsx",
+        type: "array",
+      });
+
+      const blob: Blob = new Blob([excelBuffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const timestamp = this.datePipe.transform(new Date(), "yyyy-MM-dd_HH-mm");
+      const fileName = `Kirimlar_${timestamp}.xlsx`;
+
+      FileSaver.saveAs(blob, fileName);
+
+      Swal.fire({
+        icon: "success",
+        title: "Muvaffaqiyatli!",
+        text: "Excel fayli yuklab olindi",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error("Excel export error:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Xatolik!",
+        text: "Excel faylini yaratishda xatolik yuz berdi",
+      });
+    }
+  }
+
+  /**
+   * Format currency for display
+   */
+  formatCurrency(value: any): string {
+    const num = parseFloat(value);
+    if (!num || num === 0) return "—";
+    return num.toLocaleString("uz-UZ", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    });
+  }
+
+  /**
+   * Get status class for row
+   */
+  getStatusClass(income: any): string {
+    const status = income.checkedStatus?.name;
+    switch (status) {
+      case "successful":
+        return "status-success";
+      case "failed":
+        return "status-failed";
+      case "suspicious":
+        return "status-suspicious";
+      case "notChecked":
+        return "status-not-checked";
+      default:
+        return "";
+    }
+  }
+
+  /**
+   * Toggle sort direction for simple table headers
+   */
+  toggleSort(): string {
+    return this.filters.order === "asc" ? "desc" : "asc";
+  }
+
+  /**
+   * Get status label
+   */
+  getStatusLabel(income: any): string {
+    const status = income.checkedStatus?.name;
+    switch (status) {
+      case "successful":
+        return "Muvaffaqiyatli";
+      case "failed":
+        return "Muvaffaqiyatsiz";
+      case "suspicious":
+        return "Shubhali";
+      case "notChecked":
+        return "Tekshirilmagan";
+      default:
+        return "—";
+    }
   }
 }

@@ -13,25 +13,15 @@ export class BalanceControlService {
   }
   // providing token in headers
 
-  token: string | null = localStorage.getItem("token");
-  headers = new HttpHeaders({
-    Authorization: `Bearer ${this.token}`,
-  });
-
   // get current balance
   getCurrentBalance(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/balance/current`, {
-      headers: this.headers,
-    });
+    return this.http.get(`${this.baseUrl}/balance/current`);
   }
 
   // get total balance per day
   getTotalBalances(currentPage: any): Observable<any> {
     return this.http.get(
-      `${this.baseUrl}/balance/total?page=` + currentPage + "&size=50",
-      {
-        headers: this.headers,
-      }
+      `${this.baseUrl}/balance/total?page=` + currentPage + "&size=50"
     );
   }
 
@@ -44,10 +34,7 @@ export class BalanceControlService {
       `${this.baseUrl}/balance/total?page=` +
         currentPage +
         "&size=50" +
-        filterLink,
-      {
-        headers: this.headers,
-      }
+        filterLink
     );
   }
 }

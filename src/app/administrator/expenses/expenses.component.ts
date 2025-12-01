@@ -1,606 +1,748 @@
 import { DatePipe } from "@angular/common";
-import { Component, inject, OnInit } from "@angular/core";
+import { Component, OnInit, OnDestroy } from "@angular/core";
 import { Sort } from "@angular/material/sort";
 import { AuthService } from "src/app/services/auth.service";
 import { CategoriesService } from "src/app/services/categories.service";
 import { ExpenseService } from "src/app/services/expense.service";
+import { Subject } from "rxjs";
+import { takeUntil } from "rxjs/operators";
 import Swal from "sweetalert2";
-
 import * as XLSX from "xlsx";
 import * as FileSaver from "file-saver";
 
-declare interface TableData {
-  headerRow: string[];
+// Proper interface for Expense
+interface Expense {
+  id: number;
+  uzs_cash: number;
+  usd_cash: number;
+  card: number;
+  account: number;
+  comment: string;
+  admin_id: number;
+  staff_id: number;
+  category_id: number;
+  date: string;
+  category?: {
+    id: number;
+    name: string;
+  };
+  employee?: {
+    id: number;
+    username: string;
+  };
 }
+
+interface Category {
+  id: number;
+  name: string;
+}
+
+interface User {
+  id: number;
+  username: string;
+}
+
+interface FilterState {
+  category_id: string;
+  comment: string;
+  staff_id: string;
+  startDate: string;
+  endDate: string;
+  sortField: string;
+  sortDirection: string;
+}
+
 @Component({
   selector: "app-expenses",
   templateUrl: "./expenses.component.html",
   styleUrls: ["./expenses.component.css"],
 })
-export class ExpensesComponent implements OnInit {
-  private expenseService = inject(ExpenseService);
-  private expenseCatService = inject(CategoriesService);
-  private authService = inject(AuthService);
-  expenseList: string[] = [];
-  usersList: any[] = [];
-  expenseCats: any[] = [];
-  errorMessage: string;
-  tableData1: TableData;
+export class ExpensesComponent implements OnInit, OnDestroy {
+  // Data properties
+  expenseList: Expense[] = [];
+  usersList: User[] = [];
+  expenseCats: Category[] = [];
+  filteredExpenses: Expense[] = [];
 
-  danValue: string;
-  gachaValue: string;
+  // UI state
+  isLoading: boolean = false;
+  showAdvancedFilters: boolean = false;
+  errorMessage: string = "";
 
-  // pagination
+  // Pagination
   currentPage: number = 0;
-  totalPages: number;
-  needPagination: boolean;
-  mypages = [];
-  isPagesActive: boolean;
-  adminId: string;
+  totalPages: number = 0;
+  totalItems: number = 0;
+  pageSize: number = 100;
+  pages: number[] = [];
 
-  // STORING FILTERED INCOME DATA
-  filteredExpenses: any[];
+  // Filter state
+  filters: FilterState = {
+    category_id: "",
+    comment: "",
+    staff_id: "",
+    startDate: "",
+    endDate: "",
+    sortField: "",
+    sortDirection: "",
+  };
 
-  constructor(private datePipe: DatePipe) {
-    this.loadExpenses();
-    this.loadExpenseCats();
-    this.loadUsers();
-  }
+  // Table headers
+  tableHeaders: string[] = [
+    "№",
+    "So'mda",
+    "Dollarda",
+    "Kartadan",
+    "Hisobdan",
+    "Izoh",
+    "Xodim",
+    "Kategoriya",
+    "Sana",
+    "Amallar",
+  ];
+
+  // User info
+  adminId: string = "";
+
+  // For unsubscribing
+  private destroy$ = new Subject<void>();
+
+  constructor(
+    private datePipe: DatePipe,
+    private expenseService: ExpenseService,
+    private expenseCatService: CategoriesService,
+    private authService: AuthService
+  ) {}
 
   ngOnInit(): void {
-    this.tableData1 = {
-      headerRow: [
-        "№/Jami",
-        "So'mda",
-        "Dollarda",
-        "Kartadan",
-        "Kompaniya hisobidan",
-        "Izoh",
-        "Manager ID",
-        "Kategoriyasi",
-        "Sanasi",
-        "Amallar",
-      ],
-    };
-    this.loadExpenses();
+    this.adminId = localStorage.getItem("userId") || "";
+    this.loadInitialData();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
+  // Load all initial data
+  loadInitialData(): void {
     this.loadExpenseCats();
     this.loadUsers();
-    this.adminId = localStorage.getItem("userId");
-  }
-
-  pagebyNum(ipage) {
-    this.currentPage = ipage;
-    this.isPagesActive = true;
-    document.getElementById("listcard").scrollIntoView();
     this.loadExpenses();
   }
-  // TRANSFORMING DATE VALUES
-  fromFunction(date) {
-    this.danValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
-  }
-  toFunction(date) {
-    this.gachaValue = this.datePipe.transform(date.value, "yyyy-MM-dd");
+
+  // LOAD EXPENSE CATEGORIES
+  loadExpenseCats(): void {
+    this.expenseCatService
+      .getExCats()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.expenseCats = res;
+        },
+        error: (err) => {
+          this.handleError("Kategoriyalarni yuklashda xatolik", err);
+        },
+      });
   }
 
-  // Component-level filter and sort state
-  sortCategory_id: string = "";
-  sortComment: string = "";
-  sortStaff_id: string = "";
-  sortStartDate: string = "";
-  sortEndDate: string = "";
-  sortField: string = "";
-  sortDirection: string = "";
+  // LOAD USERS LIST
+  loadUsers(): void {
+    this.authService
+      .loadUsers()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.usersList = res;
+        },
+        error: (err) => {
+          this.handleError("Foydalanuvchilarni yuklashda xatolik", err);
+        },
+      });
+  }
 
-  // Called when user sorts a column
-  sortData(sort: Sort) {
-    if (!sort.active || sort.direction === "") {
-      this.sortField = "";
-      this.sortDirection = "";
+  // LOAD EXPENSES
+  loadExpenses(): void {
+    this.isLoading = true;
+    this.errorMessage = "";
+
+    this.expenseService
+      .getExpenses(this.currentPage)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.expenseList = res.expenses || [];
+          this.currentPage = res.currentPage || 0;
+          this.totalPages = res.totalPages || 0;
+          this.totalItems = res.totalItems || 0;
+          this.updatePagination();
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.handleError("Ma'lumotlarni yuklashda xatolik", err);
+        },
+      });
+  }
+
+  // LOAD EXPENSES WITH FILTERS
+  loadExpensesWithFilters(): void {
+    this.isLoading = true;
+    this.errorMessage = "";
+
+    const queryParams = this.buildQueryParams();
+
+    this.expenseService
+      .getExpensesWithFilter(this.currentPage, queryParams)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (res) => {
+          this.expenseList = res.expenses || [];
+          this.filteredExpenses = res.expenses || [];
+          this.currentPage = res.currentPage || 0;
+          this.totalPages = res.totalPages || 0;
+          this.totalItems = res.totalItems || 0;
+          this.updatePagination();
+          this.isLoading = false;
+        },
+        error: (err) => {
+          this.isLoading = false;
+          this.handleError("Filterlangan ma'lumotlarni yuklashda xatolik", err);
+        },
+      });
+  }
+
+  // BUILD QUERY PARAMS
+  buildQueryParams(): string {
+    const params: string[] = [];
+
+    if (this.filters.category_id)
+      params.push(`category_id=${this.filters.category_id}`);
+    if (this.filters.comment) params.push(`comment=${this.filters.comment}`);
+    if (this.filters.staff_id) params.push(`staff_id=${this.filters.staff_id}`);
+    if (this.filters.startDate)
+      params.push(`startDate=${this.filters.startDate}`);
+    if (this.filters.endDate) params.push(`endDate=${this.filters.endDate}`);
+    if (this.filters.sortField) params.push(`sort=${this.filters.sortField}`);
+    if (this.filters.sortDirection)
+      params.push(`order=${this.filters.sortDirection}`);
+
+    return params.length > 0 ? `&${params.join("&")}` : "";
+  }
+
+  // UPDATE PAGINATION
+  updatePagination(): void {
+    this.pages = Array.from({ length: this.totalPages }, (_, i) => i);
+  }
+
+  // PAGINATION - GO TO PAGE
+  goToPage(page: number): void {
+    if (page < 0 || page >= this.totalPages) return;
+    this.currentPage = page;
+    this.scrollToTop();
+
+    if (this.hasActiveFilters()) {
+      this.loadExpensesWithFilters();
     } else {
-      this.sortField = sort.active;
-      this.sortDirection = sort.direction;
+      this.loadExpenses();
     }
+  }
 
-    if (this.danValue || this.gachaValue) {
-      return this.getListOfExpensesWithDate();
-    }
-    // Reuse existing filter + sort values
-    this.getListOfExpensesWIthFilter(
-      this.sortCategory_id,
-      this.sortComment,
-      this.sortStaff_id,
-      this.danValue,
-      this.gachaValue,
-      this.sortField,
-      this.sortDirection
+  // CHECK IF FILTERS ARE ACTIVE
+  hasActiveFilters(): boolean {
+    return (
+      !!this.filters.category_id ||
+      !!this.filters.comment ||
+      !!this.filters.staff_id ||
+      !!this.filters.startDate ||
+      !!this.filters.endDate
     );
   }
 
-  // Called when user applies a filter (e.g. selects category, comment, staff)
-  applyFilters(category_id: string, comment: string, staff_id: string) {
-    this.sortCategory_id = category_id;
-    this.sortComment = comment;
-    this.sortStaff_id = staff_id;
+  // APPLY FILTERS
+  applyFilter(filterType: string, value: any): void {
+    this.currentPage = 0; // Reset to first page
 
-    // Reuse last sort field + direction
-    // Reuse last sort field + direction
-    this.getListOfExpensesWIthFilter(
-      category_id,
-      comment,
-      staff_id,
-      this.danValue,
-      this.gachaValue,
-      this.sortField,
-      this.sortDirection
-    );
+    switch (filterType) {
+      case "category":
+        this.filters.category_id = value;
+        break;
+      case "comment":
+        this.filters.comment = value;
+        break;
+      case "staff":
+        this.filters.staff_id = value;
+        break;
+      case "startDate":
+        this.filters.startDate = this.formatDate(value);
+        break;
+      case "endDate":
+        this.filters.endDate = this.formatDate(value);
+        break;
+    }
+
+    if (this.hasActiveFilters()) {
+      this.loadExpensesWithFilters();
+    } else {
+      this.loadExpenses();
+    }
   }
 
-  // LOAD  INCOME CATS
-  loadExpenseCats() {
-    return this.expenseCatService.getExCats().subscribe({
-      next: (res) => {
-        this.expenseCats = res;
-        console.log("expense cats ", this.expenseCats);
-      },
-      error: (err) => {
-        this.errorMessage = err.error.error;
-      },
-    });
+  // CLEAR ALL FILTERS
+  clearFilters(): void {
+    this.filters = {
+      category_id: "",
+      comment: "",
+      staff_id: "",
+      startDate: "",
+      endDate: "",
+      sortField: "",
+      sortDirection: "",
+    };
+    this.currentPage = 0;
+    this.loadExpenses();
   }
 
-  // LOAD  USERS LIST
-  loadUsers() {
-    return this.authService.loadUsers().subscribe({
-      next: (res) => {
-        this.usersList = res;
-      },
-      error: (err) => {
-        this.errorMessage = err.error.error;
-      },
-    });
+  // SORTING
+  sortData(sort: Sort): void {
+    if (!sort.active || sort.direction === "") {
+      this.filters.sortField = "";
+      this.filters.sortDirection = "";
+    } else {
+      this.filters.sortField = sort.active;
+      this.filters.sortDirection = sort.direction;
+    }
+
+    if (this.hasActiveFilters()) {
+      this.loadExpensesWithFilters();
+    } else {
+      this.loadExpenses();
+    }
   }
 
-  // LOADING EXPENSES WITHOUT FILTER
-  loadExpenses() {
-    this.expenseService.getExpenses(this.currentPage).subscribe({
-      next: (res) => {
-        this.expenseList = res.expenses;
-        this.filteredExpenses = [];
-        this.currentPage = res.currentPage;
-        this.totalPages = res.totalPages;
-        if (this.totalPages > 1) {
-          this.needPagination = true;
-          for (let i = 0; i < this.totalPages; i++) {
-            this.mypages[i] = { id: "name" };
-          }
+  // TOGGLE ADVANCED FILTERS
+  toggleAdvancedFilters(): void {
+    this.showAdvancedFilters = !this.showAdvancedFilters;
+  }
+
+  // ADD NEW EXPENSE
+  async addExpense(): Promise<void> {
+    const categoryOptions = this.expenseCats
+      .map((cat) => `<option value="${cat.id}">${cat.name}</option>`)
+      .join("");
+
+    const userOptions = this.usersList
+      .map((user) => `<option value="${user.id}">${user.username}</option>`)
+      .join("");
+
+    const result = await Swal.fire({
+      title: "Yangi Chiqim Qo'shish",
+      html: `
+        <div style="text-align: left;">
+          <div class="form-group mb-3">
+            <label class="form-label">Naqd So'mda</label>
+            <input id="input-uzs" type="number" class="form-control" placeholder="0" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Naqd Dollarda</label>
+            <input id="input-usd" type="number" class="form-control" placeholder="0" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kartadan</label>
+            <input id="input-card" type="number" class="form-control" placeholder="0" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kompaniya Hisobidan</label>
+            <input id="input-account" type="number" class="form-control" placeholder="0" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Xodim *</label>
+            <select id="swal-staffId" class="form-control">
+              <option value="" disabled selected>Tanlang</option>
+              ${userOptions}
+            </select>
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kategoriya *</label>
+            <select id="swal-catId" class="form-control">
+              <option value="" disabled selected>Tanlang</option>
+              ${categoryOptions}
+            </select>
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Izoh</label>
+            <textarea id="input-comment" class="form-control" rows="2" placeholder="Izoh yozing..."></textarea>
+          </div>
+        </div>
+      `,
+      width: "600px",
+      showCancelButton: true,
+      confirmButtonText: "Saqlash",
+      cancelButtonText: "Bekor Qilish",
+      customClass: {
+        confirmButton: "btn btn-success",
+        cancelButton: "btn btn-danger",
+      },
+      buttonsStyling: false,
+      preConfirm: () => {
+        const uzs_cash = Number(
+          (document.getElementById("input-uzs") as HTMLInputElement).value
+        );
+        const usd_cash = Number(
+          (document.getElementById("input-usd") as HTMLInputElement).value
+        );
+        const card = Number(
+          (document.getElementById("input-card") as HTMLInputElement).value
+        );
+        const account = Number(
+          (document.getElementById("input-account") as HTMLInputElement).value
+        );
+        const staff_id = Number(
+          (document.getElementById("swal-staffId") as HTMLSelectElement).value
+        );
+        const category_id = Number(
+          (document.getElementById("swal-catId") as HTMLSelectElement).value
+        );
+        const comment = (
+          document.getElementById("input-comment") as HTMLTextAreaElement
+        ).value;
+
+        if (!category_id || !staff_id) {
+          Swal.showValidationMessage("Kategoriya va Xodim tanlanishi kerak!");
+          return false;
         }
-      },
-      error: (err) => {
-        this.errorMessage = err.error.error;
+
+        return {
+          uzs_cash,
+          usd_cash,
+          card,
+          account,
+          admin_id: Number(this.adminId),
+          staff_id,
+          category_id,
+          comment,
+          date: new Date().toISOString(),
+        };
       },
     });
-  }
 
-  // LOADING EXPENSES WITH DATE FILTER
-  getListOfExpensesWithDate() {
-    const filterLink =
-      `&startDate=` +
-      this.danValue +
-      `&endDate=` +
-      this.gachaValue +
-      `&category_id=` +
-      this.sortCategory_id +
-      `&comment=` +
-      this.sortComment +
-      `&staff_id=` +
-      this.sortStaff_id +
-      `&sort=` +
-      this.sortField +
-      `&order=` +
-      this.sortDirection;
-
-    return this.expenseService
-      .getExpensesWithFilter(this.currentPage, filterLink)
-      .subscribe({
-        next: (res) => {
-          this.expenseList = res.expenses;
-          this.filteredExpenses = res.expenses;
-          this.currentPage = res.currentPage;
-          this.totalPages = res.totalPages;
-          if (this.totalPages > 1) {
-            this.needPagination = true;
-            for (let i = 0; i < this.totalPages; i++) {
-              this.mypages[i] = { id: "name" };
-            }
-          }
-        },
-        error: (err) => {
-          this.errorMessage = err.error.error;
+    if (result.isConfirmed && result.value) {
+      Swal.fire({
+        title: "Saqlanmoqda...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
         },
       });
-  }
-  // LOAD EXPENSES WITH FILTER OF CATS, COMMENT AND ADMIN ID
-  getListOfExpensesWIthFilter(
-    category_id: string,
-    comment: string,
-    staff_id: string,
-    startDate: string,
-    endDate: string,
-    sortField: string,
-    sortDirection: string
-  ) {
-    const filterLink =
-      `&category_id=` +
-      category_id +
-      `&comment=` +
-      comment +
-      `&staff_id=` +
-      staff_id +
-      `&startDate=` +
-      startDate +
-      `&endDate=` +
-      endDate +
-      `&sort=` +
-      sortField +
-      `&order=` +
-      sortDirection;
 
-    return this.expenseService
-      .getExpensesWithFilter(this.currentPage, filterLink)
-      .subscribe({
-        next: (res) => {
-          this.expenseList = res.expenses;
-          this.filteredExpenses = res.expenses;
-          this.currentPage = res.currentPage;
-          this.totalPages = res.totalPages;
-          if (this.totalPages > 1) {
-            this.needPagination = true;
-            for (let i = 0; i < this.totalPages; i++) {
-              this.mypages[i] = { id: "name" };
-            }
-          }
-        },
-        error: (err) => {
-          this.errorMessage = err.error.error;
+      this.expenseService
+        .addExpense(result.value)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.loadExpenses();
+            Swal.fire("Muvaffaqiyat!", "Yangi chiqim qo'shildi!", "success");
+          },
+          error: (err) => {
+            Swal.fire("Xatolik", err.error?.error || err.message, "error");
+          },
+        });
+    }
+  }
+
+  // EDIT EXPENSE
+  async editExpense(expense: Expense): Promise<void> {
+    const categoryOptions = this.expenseCats
+      .map(
+        (cat) =>
+          `<option value="${cat.id}" ${
+            cat.id === expense.category_id ? "selected" : ""
+          }>${cat.name}</option>`
+      )
+      .join("");
+
+    const userOptions = this.usersList
+      .map(
+        (user) =>
+          `<option value="${user.id}" ${
+            user.id === expense.staff_id ? "selected" : ""
+          }>${user.username}</option>`
+      )
+      .join("");
+
+    const result = await Swal.fire({
+      title: "Chiqimni Tahrirlash",
+      html: `
+        <div style="text-align: left;">
+          <div class="form-group mb-3">
+            <label class="form-label">Naqd So'mda</label>
+            <input id="input-uzs" type="number" class="form-control" value="${
+              expense.uzs_cash || 0
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Naqd Dollarda</label>
+            <input id="input-usd" type="number" class="form-control" value="${
+              expense.usd_cash || 0
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kartadan</label>
+            <input id="input-card" type="number" class="form-control" value="${
+              expense.card || 0
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kompaniya Hisobidan</label>
+            <input id="input-account" type="number" class="form-control" value="${
+              expense.account || 0
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Sana *</label>
+            <input id="input-date" type="date" class="form-control" value="${
+              expense.date ? expense.date.split("T")[0] : ""
+            }" />
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Xodim *</label>
+            <select id="swal-staffId" class="form-control">
+              <option value="" disabled>Tanlang</option>
+              ${userOptions}
+            </select>
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Kategoriya *</label>
+            <select id="swal-catId" class="form-control">
+              <option value="" disabled>Tanlang</option>
+              ${categoryOptions}
+            </select>
+          </div>
+          
+          <div class="form-group mb-3">
+            <label class="form-label">Izoh</label>
+            <textarea id="input-comment" class="form-control" rows="2">${
+              expense.comment || ""
+            }</textarea>
+          </div>
+        </div>
+      `,
+      width: "600px",
+      showCancelButton: true,
+      confirmButtonText: "Saqlash",
+      cancelButtonText: "Bekor Qilish",
+      customClass: {
+        confirmButton: "btn btn-success",
+        cancelButton: "btn btn-danger",
+      },
+      buttonsStyling: false,
+      preConfirm: () => {
+        const uzs_cash = Number(
+          (document.getElementById("input-uzs") as HTMLInputElement).value
+        );
+        const usd_cash = Number(
+          (document.getElementById("input-usd") as HTMLInputElement).value
+        );
+        const card = Number(
+          (document.getElementById("input-card") as HTMLInputElement).value
+        );
+        const account = Number(
+          (document.getElementById("input-account") as HTMLInputElement).value
+        );
+        const date = (document.getElementById("input-date") as HTMLInputElement)
+          .value;
+        const staff_id = Number(
+          (document.getElementById("swal-staffId") as HTMLSelectElement).value
+        );
+        const category_id = Number(
+          (document.getElementById("swal-catId") as HTMLSelectElement).value
+        );
+        const comment = (
+          document.getElementById("input-comment") as HTMLTextAreaElement
+        ).value;
+
+        if (!category_id || !staff_id || !date) {
+          Swal.showValidationMessage(
+            "Kategoriya, Xodim va Sana kiritilishi kerak!"
+          );
+          return false;
+        }
+
+        return {
+          uzs_cash,
+          usd_cash,
+          card,
+          account,
+          date,
+          staff_id,
+          category_id,
+          comment,
+        };
+      },
+    });
+
+    if (result.isConfirmed && result.value) {
+      Swal.fire({
+        title: "Saqlanmoqda...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
         },
       });
+
+      this.expenseService
+        .editExpense(expense.id, result.value)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.loadExpenses();
+            Swal.fire("Muvaffaqiyat!", "Chiqim tahrirlandi!", "success");
+          },
+          error: (err) => {
+            Swal.fire("Xatolik", err.error?.error || err.message, "error");
+          },
+        });
+    }
   }
 
-  // UPLOADING FILTERED INCOME DATA IN EXEL FILE
-  exportToExel(data: any[], fileName: string): void {
-    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(data);
-    // Set column widths manually
+  // DELETE EXPENSE
+  async deleteExpense(id: number): Promise<void> {
+    const confirmResult = await Swal.fire({
+      title: "Rostan ham o'chirmoqchimisiz?",
+      text: "Bu amalni qaytarib bo'lmaydi!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Ha, o'chirish",
+      cancelButtonText: "Bekor qilish",
+      customClass: {
+        confirmButton: "btn btn-danger",
+        cancelButton: "btn btn-secondary",
+      },
+      buttonsStyling: false,
+    });
+
+    if (confirmResult.isConfirmed) {
+      Swal.fire({
+        title: "O'chirilmoqda...",
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        },
+      });
+
+      this.expenseService
+        .deleteExpense(id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.loadExpenses();
+            Swal.fire("O'chirildi!", "Chiqim o'chirildi!", "success");
+          },
+          error: (err) => {
+            Swal.fire("Xatolik", err.error?.error || err.message, "error");
+          },
+        });
+    }
+  }
+
+  // EXPORT TO EXCEL
+  exportToExcel(): void {
+    const dataToExport = this.filteredExpenses.length
+      ? this.filteredExpenses
+      : this.expenseList;
+
+    if (!dataToExport.length) {
+      Swal.fire("Xatolik", "Export qilish uchun ma'lumot yo'q!", "warning");
+      return;
+    }
+
+    const formattedData = dataToExport.map((exp, index) => ({
+      "№": index + 1,
+      "So'mda": this.formatCurrency(exp.uzs_cash),
+      Dollarda: this.formatCurrency(exp.usd_cash),
+      Kartadan: this.formatCurrency(exp.card),
+      Hisobdan: this.formatCurrency(exp.account),
+      Izoh: exp.comment || "",
+      Xodim: exp.employee?.username || "",
+      Kategoriya: exp.category?.name || "",
+      Sana: this.formatDate(exp.date),
+    }));
+
+    const worksheet: XLSX.WorkSheet = XLSX.utils.json_to_sheet(formattedData);
     worksheet["!cols"] = [
-      { wch: 10 }, // Soʻmda
-      { wch: 10 }, // Dollar
-      { wch: 10 }, // Karta
-      { wch: 20 }, // Hisobdan
-      { wch: 10 }, // Xodim ID
-      { wch: 10 }, // Admin ID
-      { wch: 20 }, // Kategoriya
+      { wch: 5 }, // №
+      { wch: 15 }, // So'mda
+      { wch: 15 }, // Dollarda
+      { wch: 15 }, // Kartadan
+      { wch: 15 }, // Hisobdan
       { wch: 30 }, // Izoh
-      { wch: 15 }, // Sana
+      { wch: 20 }, // Xodim
+      { wch: 20 }, // Kategoriya
+      { wch: 12 }, // Sana
     ];
 
     const workbook: XLSX.WorkBook = {
-      Sheets: { data: worksheet },
-      SheetNames: ["data"],
+      Sheets: { Chiqimlar: worksheet },
+      SheetNames: ["Chiqimlar"],
     };
 
-    const exelBuffer: any = XLSX.write(workbook, {
+    const excelBuffer: any = XLSX.write(workbook, {
       bookType: "xlsx",
       type: "array",
     });
 
-    const blob: Blob = new Blob([exelBuffer], {
-      type: "application/octet-stream",
+    const blob: Blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
-    const timestamp = new Date().toISOString().slice(0, 10);
-    const fullName = `${fileName}_${timestamp}.xlsx`;
-
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fullName;
-    link.click();
-
-    FileSaver.saveAs(blob, `${fullName}.xlsx`);
-  }
-  // format date
-  fmd(date: any) {
-    return this.datePipe.transform(date, "d MMMM, y"); // Example: "31 may, 2025"
-  }
-  // formate currency
-  formatCurrency = (val: any) => {
-    return val ? val.toLocaleString("uz-UZ") : "";
-  };
-
-  // DOWNLOAD EXEL
-  downlaodExcel() {
-    if (this.filteredExpenses.length) {
-      const filteredData = this.filteredExpenses.map((exp) => ({
-        Somda: this.formatCurrency(+exp.uzs_cash) || 0,
-        Dollarda: this.formatCurrency(+exp.usd_cash) || 0,
-        Kartadan: this.formatCurrency(+exp.card) || 0,
-        "Kompaniya Hisobidan": this.formatCurrency(+exp.account) || 0,
-        "XODIM ID": exp.staff_id,
-        "Admin ID": exp.admin_id,
-        Kategoriyasi: exp.category.name,
-        Izoh: exp.comment,
-        Sanasi: this.fmd(exp.date),
-      }));
-      this.exportToExel(filteredData, "Xarajatlar");
-      return;
-    }
-    alert("No data");
+    const timestamp = this.datePipe.transform(new Date(), "yyyy-MM-dd");
+    FileSaver.saveAs(blob, `Chiqimlar_${timestamp}.xlsx`);
   }
 
-  // ADDING NEW EXPENSE
-  async addExpense() {
-    const optionsHtml = this.expenseCats
-      .map((cat) => `<option value="${cat.id}">${cat.name}</option>`)
-      .join("");
-    const optionsHtmlUsers = this.usersList
-      .map((user) => `<option value="${user.id}">${user.username}</option>`)
-      .join("");
-    const result = await Swal.fire({
-      title: "Yangi Kirim Qo'shish",
-      html:
-        `<div class="form-group">` +
-        '<input id="input-uzs" type="text" class="form-control m-2" placeholder="Naqd Somda..." />' +
-        '<input id="input-usd" type="text" class="form-control m-2" placeholder="Naqd Dollarda..." />' +
-        '<input id="input-card" type="text" class="form-control m-2" placeholder="Kartadan..." />' +
-        '<input id="input-account" type="text" class="form-control m-2" placeholder="Kompaniya Hisobidan..." />' +
-        '<input id="input-comment" type="text" class="form-control m-2" placeholder="IZOH" />' +
-        `<select id="swal-staffId" class="form-control m-2" >
-        <option value="" disabled selected>Xodimlardan birini tanlang</option>
-        ${optionsHtmlUsers}
-        </select>` +
-        ` <select id="swal-catId" class="form-control m-2" >
-        <option value="" disabled selected>Kategoriya Tanlang</option>
-        ${optionsHtml}
-      </select>` +
-        `</div>`,
-      showCancelButton: true,
-      confirmButtonText: "Saqlash",
-      cancelButtonText: "Bekor Qilish",
-      customClass: {
-        confirmButton: "btn btn-success",
-        cancelButton: "btn btn-danger",
-      },
-      buttonsStyling: false,
+  // HELPER: FORMAT DATE
+  formatDate(date: any): string {
+    if (!date) return "";
+    return this.datePipe.transform(date, "yyyy-MM-dd") || "";
+  }
 
-      preConfirm: () => {
-        let usd_cash = Number($("#input-usd").val());
-        let uzs_cash = Number($("#input-uzs").val());
-        let card = Number($("#input-card").val());
-        let account = Number($("#input-account").val());
-        let staff_id = Number($("#swal-staffId").val());
-        let date = Date.now();
-        let comment = $("#input-comment").val();
-        let category_id = Number($("#swal-catId").val());
-        +usd_cash;
-        return {
-          usd_cash,
-          uzs_cash,
-          card,
-          account,
-          admin_id: +this.adminId,
-          date,
-          staff_id,
-          comment,
-          category_id,
-        };
-      },
-    });
+  // HELPER: FORMAT CURRENCY
+  formatCurrency(value: number): string {
+    if (!value) return "0";
+    return value.toLocaleString("uz-UZ");
+  }
 
-    if (result.isConfirmed && result.value) {
-      // console.log("result value ", result.value);
-      if (!result.value.category_id || !result.value.staff_id) {
-        Swal.fire("Xatolik", "KATEGORIYA va Xodim tanlanishi  kerak!", "error");
-        return;
-      }
-      Swal.showLoading();
-      this.expenseService.addExpense(result.value).subscribe({
-        next: (res) => {
-          this.loadExpenses();
-          Swal.fire("Muvaffaqiyat!", "Yangi Kirim kiritildi!.", "success");
-        },
-        error: (err) => {
-          Swal.fire("Xatolik", err.error?.error || err.message, "error");
-        },
-      });
+  // HELPER: HANDLE ERRORS
+  handleError(title: string, err: any): void {
+    console.error(title, err);
+    this.errorMessage = err.error?.error || err.message || "Noma'lum xatolik";
+    Swal.fire("Xatolik", this.errorMessage, "error");
+  }
+
+  // HELPER: SCROLL TO TOP
+  scrollToTop(): void {
+    const element = document.getElementById("listcard");
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
-  // UPDATING INCOME DATA
-  async editExpense(expense: any) {
-    // console.log("income data ", income);
-
-    const optionsHtml = this.expenseCats
-      .map(
-        (cat) =>
-          `<option value="${cat.id}"${
-            cat.id === expense.category_id ? "selected" : ""
-          }>${cat.name ? cat.name : ""}</option>`
-      )
-      .join("");
-
-    const optionsHtmlUser = this.usersList
-      .map(
-        (user) =>
-          `<option value="${user.id}"${
-            user.id === expense.staff_id ? "selected" : ""
-          }>${user.username ? user.username : ""}</option>`
-      )
-      .join("");
-
-    const result = await Swal.fire({
-      title: "Kirimni Tahrirlash1!",
-      html: `
-  <div class="form-group">
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-usd" style="width: 180px;">Naqd Dollarda</label>
-      <input id="input-usd" value="${
-        expense.usd_cash ? expense.usd_cash : ""
-      }" type="text" class="form-control" placeholder="Naqd Dollarda..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-uzs" style="width: 180px;">Naqd So'mda</label>
-      <input id="input-uzs" type="text" value="${
-        expense.uzs_cash ? expense.uzs_cash : ""
-      }" class="form-control" placeholder="Naqd So'mda..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-card" style="width: 180px;">Kartadan</label>
-      <input id="input-card" type="text" value="${
-        expense.card ? expense.card : ""
-      }" class="form-control" placeholder="Kartadan..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-account" style="width: 180px;">Kompaniya Hisobiga</label>
-      <input id="input-account" type="text" value="${
-        expense.account ? expense.account : ""
-      }" class="form-control" placeholder="Kompaniya Hisobiga..." />
-    </div>
-    
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-date" style="width: 180px;">Olingan Sanasi</label>
-      <input id="input-date" type="date" value="${
-        expense.date ? expense.date.split("T")[0] : ""
-      }" class="form-control" placeholder="Olingan Sanasi..." />
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-2">
-      <label for="input-comment" style="width: 180px;">IZOH</label>
-      <input id="input-comment" type="text" value="${
-        expense.comment ? expense.comment : ""
-      }" class="form-control" placeholder="IZOH" />
-    </div>
-
-     <div style="display: flex; align-items: center;" class="m-3">
-      <label for="swal-userId" style="width: 180px;">Xodimni Tanlang</label>
-      <select id="swal-userId" class="form-control">
-        <option value="" disabled selected>Xodimni Tanlang</option>
-        ${optionsHtmlUser}
-      </select>
-    </div>
-
-    <div style="display: flex; align-items: center;" class="m-3">
-      <label for="swal-catId" style="width: 180px;">Kategoriya Tanlang</label>
-      <select id="swal-catId" class="form-control">
-        <option value="" disabled selected>Kategoriya Tanlang</option>
-        ${optionsHtml}
-      </select>
-    </div>
-  </div>
-`,
-
-      showCancelButton: true,
-      confirmButtonText: "Saqlash",
-      cancelButtonText: "Bekor Qilish",
-      customClass: {
-        confirmButton: "btn btn-success",
-        cancelButton: "btn btn-danger",
-      },
-      buttonsStyling: false,
-
-      preConfirm: () => {
-        let usd_cash = Number($("#input-usd").val());
-        let uzs_cash = Number($("#input-uzs").val());
-        let card = Number($("#input-card").val());
-        let account = Number($("#input-account").val());
-
-        let date = $("#input-date").val();
-        let comment = $("#input-comment").val();
-        let category_id = Number($("#swal-catId").val());
-        let staff_id = Number($("#swal-userId").val());
-
-        return {
-          usd_cash,
-          uzs_cash,
-          card,
-          account,
-          staff_id,
-          date,
-          comment,
-          category_id,
-        };
-      },
-    });
-
-    if (result.isConfirmed && result.value) {
-      if (
-        !result.value.category_id ||
-        !result.value.date ||
-        !result.value.staff_id
-      ) {
-        Swal.fire(
-          "Xatolik",
-          "KATEGORIYA va XODIM tanlanishi va SANA kiritilishi kerak!",
-          "error"
-        );
-        return;
-      }
-
-      Swal.showLoading();
-      this.expenseService.editExpense(expense.id, result.value).subscribe({
-        next: (res) => {
-          this.loadExpenses();
-          Swal.fire("Muvaffaqiyat!", "Kirim Tahrirlandi!.", "success");
-        },
-        error: (err) => {
-          Swal.fire("Xatolik", err.error?.error || err.message, "error");
-        },
-      });
-    }
-  }
-
-  // DELETING EXPENSE WITH ID
-  delete(id: string) {
-    Swal.fire({
-      title: "O'chirish Amaliyoti uchub parol kiriting",
-      allowEnterKey: true,
-      input: "text",
-      confirmButtonText: "Kiritish",
-      customClass: {
-        confirmButton: "btn btn-success",
-      },
-      buttonsStyling: false,
-
-      preConfirm: (valueB) => {
-        if (valueB == "2") {
-          Swal.fire({
-            icon: "question",
-            title: "Rostan ham bu KIRIM malumotlarini o'chirmoqchimisiz",
-            showCancelButton: true,
-            confirmButtonText: "Ha, O'chirish",
-            cancelButtonText: "Bekor qilish",
-          }).then((result) => {
-            if (result.isConfirmed) {
-              this.expenseService.deleteExpense(+id).subscribe({
-                next: () => {
-                  Swal.fire(
-                    "Muvaffaqiyat",
-                    "KIRIM malumotlari o'chirildi!",
-                    "success"
-                  );
-                  this.loadExpenses();
-                },
-                error: (err) => {
-                  Swal.fire("Xatolik", err.error.error, "error");
-                },
-              });
-            }
-          });
-        } else {
-          Swal.fire("Parol Notogri!", "Boshqattan parol kiriting!", "error");
-          return;
-        }
-      },
-    });
+  // HELPER: GET TOTAL AMOUNT
+  getTotalAmount(field: keyof Expense): number {
+    return this.expenseList.reduce(
+      (sum, expense) => sum + (Number(expense[field]) || 0),
+      0
+    );
   }
 }

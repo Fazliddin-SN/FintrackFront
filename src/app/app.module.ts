@@ -1,7 +1,7 @@
 import { LOCALE_ID, NgModule } from "@angular/core";
 import { BrowserAnimationsModule } from "@angular/platform-browser/animations";
 import { RouterModule } from "@angular/router";
-import { HttpClientModule } from "@angular/common/http";
+import { HTTP_INTERCEPTORS, HttpClientModule } from "@angular/common/http";
 import { APP_BASE_HREF, DatePipe } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { CommonModule } from "@angular/common";
@@ -54,6 +54,7 @@ import { GlobalEnvService } from "./globalenv.service";
 
 import { registerLocaleData } from "@angular/common";
 import localeUz from "@angular/common/locales/uz";
+import { AuthInterceptor } from "./interceptors/auth.interceptor";
 
 // Register Uzbek locale
 registerLocaleData(localeUz);
@@ -118,6 +119,11 @@ export class MaterialModule {}
     ExpenseService,
     GlobalEnvService,
     { provide: LOCALE_ID, useValue: "uz" },
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: AuthInterceptor,
+      multi: true,
+    },
   ],
   bootstrap: [AppComponent],
 })

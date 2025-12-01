@@ -13,16 +13,10 @@ export class ExpenseService {
     this.baseUrl = config.baseUrl;
   }
 
-  token: string | null = localStorage.getItem("token");
-  headers = new HttpHeaders({
-    Authorization: `Bearer ${this.token}`,
-  });
-
   // fetching all expenses
   getExpenses(currentPage: number): Observable<any> {
     return this.http.get(
-      `${this.baseUrl}/spending?page=` + currentPage + `&size=50`,
-      { headers: this.headers }
+      `${this.baseUrl}/spending?page=` + currentPage + `&size=100`
     );
   }
   //get expenses with filter
@@ -31,16 +25,14 @@ export class ExpenseService {
     filterLink: string
   ): Observable<any> {
     return this.http.get<any>(
-      `${this.baseUrl}/spending?page=` + currentPage + "&size=50" + filterLink,
-      { headers: this.headers }
+      `${this.baseUrl}/spending?page=` + currentPage + "&size=100" + filterLink
     );
   }
 
   // fetching all expenses
   getMyExpenses(currentPage: number): Observable<any> {
     return this.http.get(
-      `${this.baseUrl}/spending/my-spending?page=` + currentPage + `&size=50`,
-      { headers: this.headers }
+      `${this.baseUrl}/spending/my-spending?page=` + currentPage + `&size=100`
     );
   }
   //get expenses with filter
@@ -51,9 +43,8 @@ export class ExpenseService {
     return this.http.get<any>(
       `${this.baseUrl}/spending/my-spending?page=` +
         currentPage +
-        "&size=50" +
-        filterLink,
-      { headers: this.headers }
+        "&size=100" +
+        filterLink
     );
   }
 
@@ -61,26 +52,16 @@ export class ExpenseService {
   addExpense(body: any): Observable<any> {
     // console.log("boyd ", { ...body });
 
-    return this.http.post(
-      `${this.baseUrl}/spending`,
-      { ...body },
-      { headers: this.headers }
-    );
+    return this.http.post(`${this.baseUrl}/spending`, { ...body });
   }
 
   // edit expense by id
   editExpense(expenseId: number, body: any): Observable<any> {
-    return this.http.put(
-      `${this.baseUrl}/spending/${expenseId}`,
-      { ...body },
-      { headers: this.headers }
-    );
+    return this.http.put(`${this.baseUrl}/spending/${expenseId}`, { ...body });
   }
 
   // delete expense by id
   deleteExpense(expenseId: number): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/spending/${expenseId}`, {
-      headers: this.headers,
-    });
+    return this.http.delete(`${this.baseUrl}/spending/${expenseId}`);
   }
 }

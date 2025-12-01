@@ -33,6 +33,7 @@ export class UsersComponent implements OnInit {
     return this.authService.loadUsers().subscribe({
       next: (res) => {
         this.usersList = res;
+        // console.log("users ", this.usersList);
       },
       error: (err) => {
         this.errorMessage = err.error.error;
